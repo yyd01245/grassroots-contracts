@@ -6,3 +6,20 @@ Funds are sent to the contract and staked to the user's account. The user can th
 
 In order to `unallocate` funds from a project, the user simply calls an action and specifies the proposal along with the amount to unallocate. Funds unallocated return to the contract wallet and can then either be reallocated to another project or reclaimed.
 
+## Projects
+
+
+
+### Tiers
+
+* `string tier_name`
+* `asset threshold`
+* ``
+
+## Accounts
+
+
+
+### Deposits and Withdrawals
+
+

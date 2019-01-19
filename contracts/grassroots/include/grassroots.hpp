@@ -51,7 +51,23 @@ public:
     struct tier {
         asset threshold;
         string reward_info;
-    }
+    };
+
+    struct perms {
+        bool gr;
+        bool gw;
+        bool gx;
+        bool r;
+        bool w;
+        bool x;
+    };
+
+    //Canopy idea, unrelated
+    struct canopy_leaf {
+        uint64_t leaf_id;
+        string ipfs_hash;
+        
+    };
 
     /**
      * 
