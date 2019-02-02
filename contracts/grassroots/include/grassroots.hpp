@@ -7,11 +7,11 @@
 
 #pragma once
 #include <eosiolib/eosio.hpp>
-// #include <eosiolib/permission.hpp>
-// #include <eosiolib/asset.hpp>
-// #include <eosiolib/action.hpp>
-// #include <eosiolib/singleton.hpp>
-// #include <eosiolib/transaction.hpp>
+#include <eosiolib/permission.hpp>
+#include <eosiolib/asset.hpp>
+#include <eosiolib/action.hpp>
+#include <eosiolib/singleton.hpp>
+#include <eosiolib/transaction.hpp>
 
 using namespace std;
 using namespace eosio;
@@ -24,7 +24,7 @@ public:
 
     ~grassroots();
 
-    //symbol const SYM = symbol("ROOTS", 3); //probs not
+    //symbol const SYM = symbol("ROOTS", 3); //probably not gonna have a token, but we'll see
 
     //name const ADMIN_NAME = name("grassrootsio");
 
@@ -32,6 +32,7 @@ public:
      * 
      * 
      * @scope account.value
+     * @key 
      */
     struct [[eosio::table]] account {
         name account_name;
@@ -53,22 +54,6 @@ public:
         string reward_info;
     };
 
-    struct perms {
-        bool gr;
-        bool gw;
-        bool gx;
-        bool r;
-        bool w;
-        bool x;
-    };
-
-    //Canopy idea, unrelated
-    struct canopy_leaf {
-        uint64_t leaf_id;
-        string ipfs_hash;
-        
-    };
-
     /**
      * 
      * 
@@ -78,9 +63,9 @@ public:
     struct [[eosio::table]] project {
         name project_name;
         name creator;
+        string info_link;
         asset requested;
         asset received;
-        string info_link;
         uint32_t begin_time;
         uint32_t end_time;
         uint32_t last_edit;
@@ -94,8 +79,8 @@ public:
     typedef multi_index<name("projects"), project> projects_table;
 
 
-    [[eosio::action]]
-    void newaccount(name new_account);
+    // [[eosio::action]] //TODO: remove
+    // void newaccount(name new_account);
 
     [[eosio::action]]
     void deposit();
@@ -118,5 +103,9 @@ public:
 
     [[eosio::action]]
     void rmvproject(name project_name, name creator);
+
+    //Reactions
+
+    void catch_transfer(name from, asset amount);
 
 };

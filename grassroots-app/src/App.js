@@ -4,6 +4,10 @@ import JsSignatureProvider from 'eosjs/dist/eosjs-jssig'; // development only
 import logo from './logo.svg';
 import './App.css';
 
+import ScatterJS from 'scatterjs-core';
+import ScatterEOS from 'scatterjs-plugin-eosjs';
+ScatterJS.plugins( new ScatterEOS() );
+
 const defaultPrivateKey = "5JtUScZK2XEp3g9gh7F8bwtPTRAkASmNrrftmx4AxDKD5K4zDnr"; // useraaaaaaaa
 const signatureProvider = new JsSignatureProvider([defaultPrivateKey]);
 

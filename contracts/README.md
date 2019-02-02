@@ -14,7 +14,6 @@ In order to `unallocate` funds from a project, the user simply calls an action a
 
 * `string tier_name`
 * `asset threshold`
-* ``
 
 ## Accounts
 
