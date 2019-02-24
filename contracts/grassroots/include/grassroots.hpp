@@ -1,5 +1,5 @@
 /**
- * 
+ * Grassroots is a crowd-funding development platform for EOSIO software.
  * 
  * @author Craig Branscom
  * @copyright 

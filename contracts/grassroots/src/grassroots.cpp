@@ -434,7 +434,6 @@ int grassroots::get_tier_idx(name tier_name, vector<tier> tiers) {
     return -1;
 }
 
-//BUG: only catch transfers TO grassrootsio
 void grassroots::catch_transfer(name from, asset amount) {
     //check for account
     accounts accounts(get_self(), get_self().value);
