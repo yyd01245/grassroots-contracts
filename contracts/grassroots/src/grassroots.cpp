@@ -342,12 +342,46 @@ void grassroots::readyproject(name project_name, name creator, uint8_t length_in
     projects.modify(proj, same_payer, [&](auto& row) {
         row.begin_time = now();
         row.end_time = now() + uint32_t(length_in_days * 86400);
+        row.project_status = OPEN;
         row.last_edit = now();
     });
 }
 
 void grassroots::closeproject(name project_name, name creator) {
-    //TODO: implement
+    //get project
+    projects projects(get_self(), get_self().value);
+    auto& proj = projects.get(project_name.value, "project not found");
+
+    //get account
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(creator.value, "account not found");
+
+    //authenticate
+    require_auth(creator);
+    check(creator == proj.creator, "only project creator can close the project");
+
+    //validate
+    check(now() > proj.end_time, "can't close project until past end time");
+
+    //determine new status
+    uint8_t new_status;
+    if (proj.received >= proj.requested) {
+        new_status = FUNDED;
+
+        //update account balance
+        accounts.modify(acc, same_payer, [&](auto& row) {
+            row.balance += proj.received;
+        });
+
+    } else {
+        new_status = FAILED;
+    }
+
+    //update project status
+    projects.modify(proj, same_payer, [&](auto& row) {
+        row.project_status = new_status;
+        row.last_edit = now();
+    });
 }
 
 void grassroots::rmvproject(name project_name, name creator) {
