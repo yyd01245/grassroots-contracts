@@ -106,10 +106,10 @@ public:
         indexed_by<name("bycategory"), const_mem_fun<project, uint64_t, &project::by_cat>>
         > projects;
 
-    typedef multi_index<name("pledges"), pledge
-        indexed_by<name("byproject"), const_mem_fun<project, uint64_t, &project::by_project>>
-        indexed_by<name("byaccount"), const_mem_fun<project, uint64_t, &project::by_account>>
-        indexed_by<name("bypledge"), const_mem_fun<project, uint64_t, &project::by_pledge>>
+    typedef multi_index<name("pledges"), pledge,
+        indexed_by<name("byproject"), const_mem_fun<pledge, uint64_t, &pledge::by_project>>,
+        indexed_by<name("byaccount"), const_mem_fun<pledge, uint64_t, &pledge::by_account>>,
+        indexed_by<name("bypledge"), const_mem_fun<pledge, uint128_t, &pledge::by_pledge>>
         > pledges;
 
 
@@ -137,8 +137,8 @@ public:
 
     //Functions
     bool is_valid_category(name category);
-    bool is_tier_in_project(tier_name, vector<tier> tiers);
-    vector<tier> emplace_tier_in_order(tier new_tier, vector<tier> tiers);
+    bool is_tier_in_project(name tier_name, vector<tier> tiers);
+    //vector<tier> emplace_tier_in_order(tier new_tier, vector<tier> tiers);
     int get_tier_idx(name tier_name, vector<tier> tiers);
 
     //Reactions

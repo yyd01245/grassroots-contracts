@@ -5,4 +5,4 @@
 # -L=<string>              - Add directory to library search path
 
 #eosio.cdt v1.5.0
-eosio-cpp -I="./include/" -o="grassroots.wasm" -contract="grassroots" -abigen /grassroots/src/grassroots.cpp
+eosio-cpp -I="./include/" -o="grassroots.wasm" -contract="grassroots" -abigen ./grassroots/src/grassroots.cpp

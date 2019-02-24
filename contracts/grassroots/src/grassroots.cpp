@@ -6,7 +6,7 @@
  * @copyright defined in LICENSE.txt
  */
 
-#include <grassroots.hpp>
+#include "../include/grassroots.hpp"
 
 grassroots::grassroots(name self, name code, datastream<const char*> ds) : contract(self, code, ds) {}
 
@@ -59,14 +59,13 @@ void grassroots::pledge(name project_name, name tier_name, name pledger) {
         //get tier index
         vector<tier> new_tiers_after_pledge = proj.tiers;
         int idx = get_tier_idx(tier_name, new_tiers_after_pledge);
+        asset price = new_tiers_after_pledge[idx].price;
+        new_tiers_after_pledge[idx].pledges_left -= 1;
 
         //validate
         check(idx != -1, "tier index not found");
         check(new_tiers_after_pledge[idx].pledges_left > 0, "no pledges left at this tier");
         check(acc.unspent_balance >= price, "insufficient unspent balance");
-        
-        asset price = new_tiers_after_pledge[idx].price;
-        new_tiers_after_pledge[idx].pledges_left -= 1;
 
         //charge pledge price
         accounts.modify(acc, same_payer, [&](auto& row) {
@@ -75,7 +74,7 @@ void grassroots::pledge(name project_name, name tier_name, name pledger) {
         });
 
         //update tier
-        projects.modify(acc, same_payer, [&](auto& row) {
+        projects.modify(proj, same_payer, [&](auto& row) {
             row.tiers = new_tiers_after_pledge;
         });
 
@@ -172,7 +171,7 @@ void grassroots::newproject(name project_name, name category, name creator,
 void grassroots::addtier(name project_name, name creator, 
     name tier_name, asset price, string description, uint8_t pledges) {
     //get project
-    projects projects(get_self(), get_slef().value);
+    projects projects(get_self(), get_self().value);
     auto proj = projects.get(project_name.value, "project not found");
 
     //authenticate
@@ -190,10 +189,12 @@ void grassroots::addtier(name project_name, name creator,
         price,
         description,
         0 //pledges_left
-    }
+    };
 
     //emplace in order by price
-    vector<tiers> new_tiers = emplace_tier_in_order(new_tier, proj.tiers);
+    //vector<tier> new_tiers = emplace_tier_in_order(new_tier, proj.tiers);
+    vector<tier> new_tiers = proj.tiers;
+    new_tiers.emplace_back(new_tier);
 
     //update tiers
     projects.modify(proj, same_payer, [&](auto& row) {
@@ -249,7 +250,7 @@ bool grassroots::is_valid_category(name category) {
     return false;
 }
 
-bool grassroots::is_tier_in_project(tier_name, vector<tier> tiers) {
+bool grassroots::is_tier_in_project(name tier_name, vector<tier> tiers) {
     for (tier t : tiers) {
         if (t.tier_name == tier_name) {
             return true;
@@ -259,10 +260,12 @@ bool grassroots::is_tier_in_project(tier_name, vector<tier> tiers) {
     return false;
 }
 
-vector<tier> grassroots::emplace_tier_in_order(tier new_tier, vector<tier> tiers) {
-    //TODO: implement
-    return tiers.emplace_back(new_tier);
-}
+// vector<tier> grassroots::emplace_tier_in_order(grassroots::tier new_tier, vector<tier> tiers) {
+//     //TODO: implement
+//     vector<grassroots::tier> new_tiers = tiers;
+//     new_tiers.emplace_back(new_tier);
+//     return new_tiers;
+// }
 
 int grassroots::get_tier_idx(name tier_name, vector<tier> tiers) {
     for (int i = 0; i < tiers.size(); i++) {
@@ -289,7 +292,7 @@ void grassroots::catch_transfer(name from, asset amount) {
     } else { //account found
         //update unspent balance
         accounts.modify(acc, same_payer, [&](auto& row) {
-            row.unspent_balace += amount;
+            row.unspent_balance += amount;
         });
     }
 }
