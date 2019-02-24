@@ -25,10 +25,10 @@ public:
     ~grassroots();
 
     //const symbol SYM = symbol("ROOT", 3); //probably not gonna have a token, but we'll see
-    //const name ADMIN_NAME = name("grassrootsio");
     //const symbol EOS_SYM = symbol("EOS", 4);
     //const symbol BOS_SYM = symbol("BOS", 4);
 
+    const name ADMIN_NAME = name("grassrootsio");
     const symbol TLOS_SYM = symbol("TLOS", 4);
     const asset PROJECT_FEE = asset(250000, TLOS_SYM); //25 TLOS
 
@@ -115,7 +115,7 @@ public:
 
     ACTION newaccount(name new_account_name);
 
-    ACTION pledge(name project_name, name tier_name, name pledger);
+    ACTION pledge(name project_name, name tier_name, name pledger, string memo);
 
     ACTION unpledge(name project_name, asset amount);
 

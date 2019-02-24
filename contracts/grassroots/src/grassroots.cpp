@@ -29,7 +29,7 @@ void grassroots::newaccount(name new_account_name) {
     });
 }
 
-void grassroots::pledge(name project_name, name tier_name, name pledger) {
+void grassroots::pledge(name project_name, name tier_name, name pledger, string memo) {
     //get project
     projects projects(get_self(), get_self().value);
     auto proj = projects.get(project_name.value, "project not found");
@@ -126,7 +126,7 @@ void grassroots::newproject(name project_name, name category, name creator,
 
     //get account
     accounts accounts(get_self(), get_self().value);
-    auto acc = accounts.get(creator.value, "account not found");
+    auto& acc = accounts.get(creator.value, "account not found");
 
     //get projects
     projects projects(get_self(), get_self().value);
@@ -172,7 +172,7 @@ void grassroots::addtier(name project_name, name creator,
     name tier_name, asset price, string description, uint8_t pledges) {
     //get project
     projects projects(get_self(), get_self().value);
-    auto proj = projects.get(project_name.value, "project not found");
+    auto& proj = projects.get(project_name.value, "project not found");
 
     //authenticate
     require_auth(creator);
@@ -182,13 +182,15 @@ void grassroots::addtier(name project_name, name creator,
     check(price > asset(0, TLOS_SYM), "price must be greater than 0");
     check(description != "", "description cannot be blank");
     check(!is_tier_in_project(tier_name, proj.tiers), "tier with same name exists in project");
+    check(pledges > 0, "must have more than 0 pledges");
+    check(proj.begin_time == 0 && proj.end_time == 0, "cannot edit project after readying");
 
     //make new tier
     tier new_tier = {
         tier_name,
         price,
         description,
-        0 //pledges_left
+        pledges //pledges_left
     };
 
     //emplace in order by price
@@ -206,13 +208,35 @@ void grassroots::addtier(name project_name, name creator,
 
 void grassroots::updateinfo(name project_name, name creator,
         string title, string description, string info_link, asset requested) {
-    //TODO: implement
+    //get project
+    projects projects(get_self(), get_self().value);
+    auto& proj = projects.get(project_name.value, "project not found");
+
+    //authenticate
+    require_auth(creator);
+    check(proj.creator == creator, "cannot add tiers to another account's project");
+
+    //validate
+    check(title != "", "title cannot be blank");
+    check(description != "", "description cannot be blank");
+    check(info_link != "", "info_link cannot be blank");
+    check(requested >= asset(0, TLOS_SYM), "must request a positive amount");
+    check(proj.begin_time == 0 && proj.end_time == 0, "cannot edit project after readying");
+
+    //update project info
+    projects.modify(proj, same_payer, [&](auto& row) {
+        row.title = title;
+        row.description = description;
+        row.info_link = info_link;
+        row.requested = requested;
+        row.last_edit = now();
+    });
 }
 
 void grassroots::readyproject(name project_name, name creator, uint8_t length_in_days) {
     //get project
     projects projects(get_self(), get_self().value);
-    auto proj = projects.get(project_name.value, "project not found");
+    auto& proj = projects.get(project_name.value, "project not found");
 
     //authenticate
     require_auth(creator);
@@ -231,7 +255,16 @@ void grassroots::readyproject(name project_name, name creator, uint8_t length_in
 }
 
 void grassroots::rmvproject(name project_name, name creator) {
-    //TODO: implement
+    //get project
+    projects projects(get_self(), get_self().value);
+    auto& proj = projects.get(project_name.value, "project not found");
+
+    //authenticate
+    require_auth(creator);
+    check(creator == proj.creator, "only project creator can remove the project");
+
+    //remove project
+    projects.erase(proj);
 }
 
 //TODO: make this function more elegant
@@ -277,6 +310,7 @@ int grassroots::get_tier_idx(name tier_name, vector<tier> tiers) {
     return -1;
 }
 
+//BUG: only catch transfers TO grassrootsio
 void grassroots::catch_transfer(name from, asset amount) {
     //check for account
     accounts accounts(get_self(), get_self().value);
@@ -329,7 +363,9 @@ extern "C"
             
             grassroots grassroots(name(receiver), name(code), ds);
             auto args = unpack_action_data<transfer_args>();
-            grassroots.catch_transfer(args.from, args.quantity);
+            if (args.to == grassroots.ADMIN_NAME) {
+                grassroots.catch_transfer(args.from, args.quantity);
+            }
             //execute_action<grassroots>(eosio::name(receiver), eosio::name(code), &grassroots::catch_transfer(args.from, args.quantity));
         }
     }
