@@ -30,6 +30,7 @@ public:
     const symbol TLOS_SYM = symbol("TLOS", 4);
     const symbol ROOT_SYM = symbol("ROOT", 0);
     const asset PROJECT_FEE = asset(250000, TLOS_SYM); //25 TLOS
+    const asset RAM_FEE = asset(1000, TLOS_SYM);
 
     struct tier {
         name tier_name;
@@ -137,8 +138,8 @@ public:
     ACTION addtier(name project_name, name creator, 
         name tier_name, asset price, string description, uint16_t contributions);
 
-    ACTION updateinfo(name project_name, name creator,
-        string title, string description, string info_link, asset requested);
+    ACTION editproject(name project_name, name creator,
+        string new_title, string new_desc, string new_link, asset new_requested);
 
     ACTION readyproject(name project_name, name creator, uint8_t length_in_days);
 
@@ -154,6 +155,6 @@ public:
 
 
     //Reactions
-    void catch_transfer(name from, asset amount);
+    void catch_transfer(name from, asset amount, string memo);
 
 };

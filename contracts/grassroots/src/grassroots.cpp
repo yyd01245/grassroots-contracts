@@ -126,7 +126,7 @@ void grassroots::uncontribute(name project_name, name contributor, name tier_nam
     //increment remaining contributions
     new_tiers[idx].remaining += 1;
     
-    //update account
+    //refund account
     accounts.modify(acc, same_payer, [&](auto& row) {
         row.balance += new_tiers[idx].price;
     });
@@ -298,8 +298,8 @@ void grassroots::addtier(name project_name, name creator,
 
 }
 
-void grassroots::updateinfo(name project_name, name creator,
-        string title, string description, string info_link, asset requested) {
+void grassroots::editproject(name project_name, name creator,
+        string new_title, string new_desc, string new_link, asset new_requested) {
     //get project
     projects projects(get_self(), get_self().value);
     auto& proj = projects.get(project_name.value, "project not found");
@@ -309,18 +309,19 @@ void grassroots::updateinfo(name project_name, name creator,
     check(proj.creator == creator, "cannot add tiers to another account's project");
 
     //validate
-    check(title != "", "title cannot be blank");
-    check(description != "", "description cannot be blank");
-    check(info_link != "", "info_link cannot be blank");
-    check(requested >= asset(0, TLOS_SYM), "must request a positive amount");
-    check(proj.begin_time == 0 && proj.end_time == 0, "cannot edit project after readying");
+    check(new_title != "", "title cannot be blank");
+    check(new_desc != "", "description cannot be blank");
+    check(new_link != "", "info_link cannot be blank");
+    check(new_requested >= asset(0, TLOS_SYM), "must request a positive amount");
+    check(proj.begin_time == 0 && proj.end_time == 0 && proj.project_status == SETUP,
+         "cannot edit project after readying");
 
     //update project info
     projects.modify(proj, same_payer, [&](auto& row) {
-        row.title = title;
-        row.description = description;
-        row.info_link = info_link;
-        row.requested = requested;
+        row.title = new_title;
+        row.description = new_desc;
+        row.info_link = new_link;
+        row.requested = new_requested;
         row.last_edit = now();
     });
 }
@@ -405,9 +406,12 @@ bool grassroots::is_valid_category(name category) {
         category == name("apps") || 
         category == name("research") || 
         category == name("tools") || 
-        category == name("media") || 
-        category == name("outreach") || 
-        category == name("products")) {
+        category == name("environment") ||
+        category == name("video") || 
+        category == name("music") || 
+        category == name("expansion") || 
+        category == name("products") ||
+        category == name("marketing")) {
         return true;
     }
 
@@ -434,16 +438,19 @@ int grassroots::get_tier_idx(name tier_name, vector<tier> tiers) {
     return -1;
 }
 
-void grassroots::catch_transfer(name from, asset amount) {
+void grassroots::catch_transfer(name from, asset amount, string memo) {
     //check for account
     accounts accounts(get_self(), get_self().value);
     auto acc = accounts.find(from.value);
 
-    if (acc == accounts.end()) { //no account found
+    if (acc == accounts.end() && memo == "newaccount") { //no account found, make new account
+        //check amount covers fee
+        check(amount >= RAM_FEE, "must transfer at least 0.1 TLOS to cover account creation fee");
+
         //emplace new account, ram paid by contract
         accounts.emplace(get_self(), [&](auto& row) {
             row.account_name = from;
-            row.balance = amount;
+            row.balance = amount - RAM_FEE;
             row.dividends = asset(0, ROOT_SYM);
         });
     } else { //account found
@@ -472,7 +479,7 @@ extern "C"
             switch (action)
             {
                 EOSIO_DISPATCH_HELPER(grassroots, (newaccount)(contribute)(uncontribute)(donate)(rmvaccount)(withdraw)
-                    (newproject)(addtier)(updateinfo)(readyproject)(closeproject)(rmvproject));
+                    (newproject)(addtier)(editproject)(readyproject)(closeproject)(rmvproject));
             }
 
         } else if (code == name("eosio.token").value && action == name("transfer").value) {
@@ -487,7 +494,7 @@ extern "C"
             grassroots grassroots(name(receiver), name(code), ds);
             auto args = unpack_action_data<transfer_args>();
             if (args.to == grassroots.ADMIN_NAME) {
-                grassroots.catch_transfer(args.from, args.quantity);
+                grassroots.catch_transfer(args.from, args.quantity, args.memo);
             }
             //execute_action<grassroots>(eosio::name(receiver), eosio::name(code), &grassroots::catch_transfer(args.from, args.quantity));
         }
