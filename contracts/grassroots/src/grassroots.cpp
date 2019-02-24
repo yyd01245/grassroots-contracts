@@ -29,14 +29,14 @@ void grassroots::newaccount(name new_account_name) {
     });
 }
 
-void grassroots::pledge(name project_name, name tier_name, name pledger, string memo) {
+void grassroots::newpledge(name project_name, name tier_name, name pledger, string memo) {
     //get project
     projects projects(get_self(), get_self().value);
-    auto proj = projects.get(project_name.value, "project not found");
+    auto& proj = projects.get(project_name.value, "project not found");
 
     //get account
     accounts accounts(get_self(), get_self().value);
-    auto acc = accounts.get(pledger.value, "account not found");
+    auto& acc = accounts.get(pledger.value, "account not found");
 
     //authenticate
     require_auth(pledger);
@@ -73,9 +73,10 @@ void grassroots::pledge(name project_name, name tier_name, name pledger, string 
             row.spent_balance += price;
         });
 
-        //update tier
+        //update project
         projects.modify(proj, same_payer, [&](auto& row) {
             row.tiers = new_tiers_after_pledge;
+            row.received += price;
         });
 
         //emplace pledge, ram paid by user
@@ -116,7 +117,13 @@ void grassroots::withdraw(name account_name, asset amount) {
         row.unspent_balance -= amount;
     });
 
-    //TODO: inline transfer to account_name
+    //requires grassrootsio@active to have grassrootsio@eosio.code
+    action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
+		get_self(), //from
+		acc.account_name, //to
+		amount, //quantity
+        std::string("grassroots withdrawal") //memo
+	)).send();
 
 }
 
@@ -169,7 +176,7 @@ void grassroots::newproject(name project_name, name category, name creator,
 }
 
 void grassroots::addtier(name project_name, name creator, 
-    name tier_name, asset price, string description, uint8_t pledges) {
+    name tier_name, asset price, string description, uint16_t pledges) {
     //get project
     projects projects(get_self(), get_self().value);
     auto& proj = projects.get(project_name.value, "project not found");
@@ -293,13 +300,6 @@ bool grassroots::is_tier_in_project(name tier_name, vector<tier> tiers) {
     return false;
 }
 
-// vector<tier> grassroots::emplace_tier_in_order(grassroots::tier new_tier, vector<tier> tiers) {
-//     //TODO: implement
-//     vector<grassroots::tier> new_tiers = tiers;
-//     new_tiers.emplace_back(new_tier);
-//     return new_tiers;
-// }
-
 int grassroots::get_tier_idx(name tier_name, vector<tier> tiers) {
     for (int i = 0; i < tiers.size(); i++) {
         if (tiers[i].tier_name == tier_name) {
@@ -348,7 +348,7 @@ extern "C"
         {
             switch (action)
             {
-                EOSIO_DISPATCH_HELPER(grassroots, (newaccount)(pledge)(unpledge)(withdraw)
+                EOSIO_DISPATCH_HELPER(grassroots, (newaccount)(newpledge)(unpledge)(withdraw)
                     (newproject)(addtier)(updateinfo)(readyproject)(rmvproject));
             }
 

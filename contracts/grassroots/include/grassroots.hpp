@@ -10,7 +10,6 @@
 #include <eosiolib/permission.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/action.hpp>
-#include <eosiolib/singleton.hpp>
 #include <eosiolib/transaction.hpp>
 
 using namespace std;
@@ -36,7 +35,7 @@ public:
         name tier_name;
         asset price;
         string description;
-        uint8_t pledges_left;
+        uint16_t pledges_left;
 
         EOSLIB_SERIALIZE(tier, (tier_name)(price)(description)(pledges_left))
     };
@@ -115,7 +114,7 @@ public:
 
     ACTION newaccount(name new_account_name);
 
-    ACTION pledge(name project_name, name tier_name, name pledger, string memo);
+    ACTION newpledge(name project_name, name tier_name, name pledger, string memo);
 
     ACTION unpledge(name project_name, asset amount);
 
@@ -126,7 +125,7 @@ public:
         string title, string description, string info_link, asset requested);
 
     ACTION addtier(name project_name, name creator, 
-        name tier_name, asset price, string description, uint8_t pledges);
+        name tier_name, asset price, string description, uint16_t pledges);
 
     ACTION updateinfo(name project_name, name creator,
         string title, string description, string info_link, asset requested);
@@ -138,7 +137,6 @@ public:
     //Functions
     bool is_valid_category(name category);
     bool is_tier_in_project(name tier_name, vector<tier> tiers);
-    //vector<tier> emplace_tier_in_order(tier new_tier, vector<tier> tiers);
     int get_tier_idx(name tier_name, vector<tier> tiers);
 
     //Reactions
