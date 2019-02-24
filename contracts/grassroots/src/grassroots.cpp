@@ -94,7 +94,7 @@ void grassroots::contribute(name project_name, name tier_name, name contributor,
 
 }
 
-void grassroots::uncontribute(name project_name, name contributor, name tier_name) {
+void grassroots::refund(name project_name, name contributor, name tier_name) {
     //find project
     projects projects(get_self(), get_self().value);
     auto& proj = projects.get(project_name.value);
@@ -116,7 +116,7 @@ void grassroots::uncontribute(name project_name, name contributor, name tier_nam
     check(contrib != by_contribs.end(), "account hasn't contributed to this project");
     check(acc.account_name == contributor, "cannot remove someone else's contribution");
     check(now() > proj.begin_time && now() <= proj.end_time && proj.received < proj.requested, 
-        "cannot uncontribute after project is funded");
+        "cannot refund after project is funded");
     
     //get tier price
     vector<tier> new_tiers = proj.tiers;
@@ -478,7 +478,7 @@ extern "C"
         {
             switch (action)
             {
-                EOSIO_DISPATCH_HELPER(grassroots, (newaccount)(contribute)(uncontribute)(donate)(rmvaccount)(withdraw)
+                EOSIO_DISPATCH_HELPER(grassroots, (newaccount)(contribute)(refund)(donate)(rmvaccount)(withdraw)
                     (newproject)(addtier)(editproject)(readyproject)(closeproject)(rmvproject));
             }
 

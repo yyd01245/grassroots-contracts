@@ -44,7 +44,7 @@ When setting string variables, use markdown format.
 
 After creating the new project, the project creator can now add tiers to the project for contributors to purchase. Each tier can be seen as a purchase package when bundled with reward(s) outlined in the project description.
 
-If a project is readied without any tiers, it cannot receive contributions and can only receive direct donations through the `grassroots::donate` action. 
+If a project is readied without any tiers, it cannot receive contributions and can only receive direct donations through the `grassroots::donate` action.
 
 * `addtier`(name project_name, name creator, name tier_name, asset price, string description, uint16_t contributions)
 
@@ -159,3 +159,7 @@ To simply make a donation to a project without purchasing a tier, call the `gras
     `amount` is the amount in `TLOS` to donate.
 
     `memo` is a brief memo for the project creator.
+
+### Refund a Contribution
+
+* `refund`

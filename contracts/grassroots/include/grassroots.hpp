@@ -124,7 +124,7 @@ public:
 
     ACTION contribute(name project_name, name tier_name, name contributor, string memo);
 
-    ACTION uncontribute(name project_name, name contributor, name tier_name);
+    ACTION refund(name project_name, name contributor, name tier_name);
 
     ACTION donate(name project_name, name donor, asset amount, string memo);
 
