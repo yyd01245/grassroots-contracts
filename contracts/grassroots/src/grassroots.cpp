@@ -1,5 +1,5 @@
 /**
- * 
+ * Grassroots is a crowd-funding development platform for EOSIO software.
  * 
  * @author Craig Branscom
  * @contract grassroots
@@ -24,100 +24,186 @@ void grassroots::newaccount(name new_account_name) {
     //emplace new account, ram paid by user
     accounts.emplace(new_account_name, [&](auto& row) {
         row.account_name = new_account_name;
-        row.unspent_balance = asset(0, TLOS_SYM);
-        row.spent_balance = asset(0, TLOS_SYM);
+        row.balance = asset(0, TLOS_SYM);
+        row.dividends = asset(0, ROOT_SYM);
     });
 }
 
-void grassroots::newpledge(name project_name, name tier_name, name pledger, string memo) {
+void grassroots::contribute(name project_name, name tier_name, name contributor, string memo) {
     //get project
     projects projects(get_self(), get_self().value);
     auto& proj = projects.get(project_name.value, "project not found");
 
     //get account
     accounts accounts(get_self(), get_self().value);
-    auto& acc = accounts.get(pledger.value, "account not found");
+    auto& acc = accounts.get(contributor.value, "account not found");
 
     //authenticate
-    require_auth(pledger);
-    check(acc.account_name == pledger, "can't pledge from someone else's account");
+    require_auth(contributor);
+    check(acc.account_name == contributor, "can't contribute from someone else's account");
 
     //validate
     check(is_tier_in_project(tier_name, proj.tiers), "tier doesn't exist in project");
+    check(now() > proj.begin_time && now() < proj.end_time, "cannot contribute outside campaign window");
 
     uint128_t proj_name = static_cast<uint128_t>(project_name.value);
-    uint128_t acc_name = static_cast<uint128_t>(pledger.value);
-    uint128_t pledge_key = (proj_name << 64) | acc_name;
+    uint128_t acc_name = static_cast<uint128_t>(contributor.value);
+    uint128_t contrib_key = (proj_name << 64) | acc_name;
     
-    //search for existing pledge
-    pledges pledges(get_self(), get_self().value);
-    auto by_pledges = pledges.get_index<name("bypledge")>();
-    auto pl = by_pledges.find(pledge_key);
+    //search for existing contribution
+    contributions contributions(get_self(), get_self().value);
+    auto by_contribs = contributions.get_index<name("bycontrib")>();
+    auto contrib = by_contribs.find(contrib_key);
 
-    if (pl == by_pledges.end()) { //new pledge
+    if (contrib == by_contribs.end()) { //new contribution
 
         //get tier index
-        vector<tier> new_tiers_after_pledge = proj.tiers;
-        int idx = get_tier_idx(tier_name, new_tiers_after_pledge);
-        asset price = new_tiers_after_pledge[idx].price;
-        new_tiers_after_pledge[idx].pledges_left -= 1;
+        vector<tier> new_tiers_after_contrib = proj.tiers;
+        int idx = get_tier_idx(tier_name, new_tiers_after_contrib);
+        asset price = new_tiers_after_contrib[idx].price;
+        new_tiers_after_contrib[idx].remaining -= 1;
 
         //validate
         check(idx != -1, "tier index not found");
-        check(new_tiers_after_pledge[idx].pledges_left > 0, "no pledges left at this tier");
-        check(acc.unspent_balance >= price, "insufficient unspent balance");
+        check(new_tiers_after_contrib[idx].remaining > 0, "no contributions left at this tier");
+        check(acc.balance >= price, "insufficient balance");
 
-        //charge pledge price
+        //charge contribution price
         accounts.modify(acc, same_payer, [&](auto& row) {
-            row.unspent_balance -= price;
-            row.spent_balance += price;
+            row.balance -= price;
         });
 
         //update project
         projects.modify(proj, same_payer, [&](auto& row) {
-            row.tiers = new_tiers_after_pledge;
+            row.tiers = new_tiers_after_contrib;
             row.received += price;
         });
 
-        //emplace pledge, ram paid by user
-        pledges.emplace(pledger, [&](auto& row) {
-            row.pledge_id = pledges.available_primary_key();
+        //emplace contribution, ram paid by user
+        contributions.emplace(contributor, [&](auto& row) {
+            row.contrib_id = contributions.available_primary_key();
             row.project_name = project_name;
-            row.pledger = pledger;
-            row.amount = price;
-            row.timestamp = now();
+            row.contributor = contributor;
+            row.tier_name = tier_name;
         });
 
-    } else { //pledge for project already exists
-        //TODO: implement upgrading/downgrading pledge tier
-        check(false, "pledge adjustment in developement...");
+    } else { //contribution for project already exists
+        //TODO: implement upgrading/downgrading contribution tier
+        check(false, "contribution adjustment in developement...");
     }
 
 }
 
-void grassroots::unpledge(name project_name, asset amount) {
-    //TODO: implement
+void grassroots::uncontribute(name project_name, name contributor, name tier_name) {
+    //find project
+    projects projects(get_self(), get_self().value);
+    auto& proj = projects.get(project_name.value);
+
+    //get account
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(contributor.value, "account not found");
+
+    uint128_t proj_name = static_cast<uint128_t>(project_name.value);
+    uint128_t acc_name = static_cast<uint128_t>(contributor.value);
+    uint128_t contrib_key = (proj_name << 64) | acc_name;
+    
+    //search for existing contribution
+    contributions contributions(get_self(), get_self().value);
+    auto by_contribs = contributions.get_index<name("bycontrib")>();
+    auto contrib = by_contribs.find(contrib_key);
+    
+    //validate
+    check(contrib != by_contribs.end(), "account hasn't contributed to this project");
+    check(acc.account_name == contributor, "cannot remove someone else's contribution");
+    check(now() > proj.begin_time && now() <= proj.end_time && proj.received < proj.requested, 
+        "cannot uncontribute after project is funded");
+    
+    //get tier price
+    vector<tier> new_tiers = proj.tiers;
+    int idx = get_tier_idx(contrib->tier_name, new_tiers);
+    check(idx != -1, "tier not found");
+    
+    //increment remaining contributions
+    new_tiers[idx].remaining += 1;
+    
+    //update account
+    accounts.modify(acc, same_payer, [&](auto& row) {
+        row.balance += new_tiers[idx].price;
+    });
+
+    //update project
+    projects.modify(proj, same_payer, [&](auto& row) {
+        row.tiers = new_tiers;
+        row.received -= new_tiers[idx].price;
+    });
+
+    //remove contribution
+    by_contribs.erase(contrib);
+    
+}
+
+void grassroots::donate(name project_name, name donor, asset amount, string memo) {
+    //get project
+    projects projects(get_self(), get_self().value);
+    auto& proj = projects.get(project_name.value, "project not found");
+
+    //get account
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(donor.value, "account not found");
+
+    //authenticate
+    require_auth(donor);
+    check(acc.account_name == donor, "cannot donate from someone else's account");
+
+    //validate
+    check(amount > asset(0, TLOS_SYM), "must donate a positive amount");
+    check(acc.balance >= amount, "insufficient balance");
+
+    //add donation to project
+    projects.modify(proj, same_payer, [&](auto& row) {
+        row.received += amount;
+    });
+
+    //subtract donation from balance
+    accounts.modify(acc, same_payer, [&](auto& row) {
+        row.balance -= amount;
+    });
+}
+
+void grassroots::rmvaccount(name account_name) {
+    //get account
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(account_name.value, "account not found");
+
+    //authenticate
+    require_auth(account_name);
+    check(acc.account_name == account_name, "cannot withdraw from another user's account");
+    check(acc.balance == asset(0, TLOS_SYM), "cannot remove acount with balance");
+    check(acc.dividends == asset(0, ROOT_SYM), "cannot remove account with dividends");
+
+    //remove account
+    accounts.erase(acc);
 }
 
 void grassroots::withdraw(name account_name, asset amount) {
     //get account
     accounts accounts(get_self(), get_self().value);
-    auto acc = accounts.get(account_name.value, "account not found");
+    auto& acc = accounts.get(account_name.value, "account not found");
 
     //authenticate
     require_auth(account_name);
     check(acc.account_name == account_name, "cannot withdraw from another user's account");
 
     //validate
-    check(acc.unspent_balance >= amount, "insufficient unspent balance");
+    check(acc.balance >= amount, "insufficient balance");
     check(amount > asset(0, TLOS_SYM), "must withdraw a positive amount");
 
     //update balances
     accounts.modify(acc, same_payer, [&](auto& row) {
-        row.unspent_balance -= amount;
+        row.balance -= amount;
     });
 
-    //requires grassrootsio@active to have grassrootsio@eosio.code
+    //inline trx requires grassrootsio@active to have grassrootsio@eosio.code
     action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
 		get_self(), //from
 		acc.account_name, //to
@@ -126,7 +212,6 @@ void grassroots::withdraw(name account_name, asset amount) {
 	)).send();
 
 }
-
 
 void grassroots::newproject(name project_name, name category, name creator,
         string title, string description, string info_link, asset requested) {
@@ -140,7 +225,7 @@ void grassroots::newproject(name project_name, name category, name creator,
     auto proj = projects.find(project_name.value);
 
     //authenticate
-    require_recipient(creator);
+    require_auth(creator);
     check(acc.account_name == creator, "can't make a project with someone else's account");
 
     //validate
@@ -150,6 +235,7 @@ void grassroots::newproject(name project_name, name category, name creator,
     check(description != "", "description cannot be blank");
     check(info_link != "", "info_link cannot be blank");
     check(requested > asset(0, TLOS_SYM), "must request positive amount of TLOS");
+    check(acc.balance >= PROJECT_FEE, "insufficient balance to cover project fee");
 
     vector<tier> blank_tiers;
 
@@ -166,17 +252,18 @@ void grassroots::newproject(name project_name, name category, name creator,
         row.received = asset(0, TLOS_SYM);
         row.begin_time = 0;
         row.end_time = 0;
+        row.project_status = SETUP;
         row.last_edit = now();
     });
 
     //charge fee
     accounts.modify(acc, same_payer, [&](auto& row) {
-        row.unspent_balance -= PROJECT_FEE;
+        row.balance -= PROJECT_FEE;
     });
 }
 
 void grassroots::addtier(name project_name, name creator, 
-    name tier_name, asset price, string description, uint16_t pledges) {
+    name tier_name, asset price, string description, uint16_t contributions) {
     //get project
     projects projects(get_self(), get_self().value);
     auto& proj = projects.get(project_name.value, "project not found");
@@ -189,19 +276,17 @@ void grassroots::addtier(name project_name, name creator,
     check(price > asset(0, TLOS_SYM), "price must be greater than 0");
     check(description != "", "description cannot be blank");
     check(!is_tier_in_project(tier_name, proj.tiers), "tier with same name exists in project");
-    check(pledges > 0, "must have more than 0 pledges");
+    check(contributions > 0, "must have more than 0 contributions");
     check(proj.begin_time == 0 && proj.end_time == 0, "cannot edit project after readying");
 
     //make new tier
     tier new_tier = {
-        tier_name,
-        price,
-        description,
-        pledges //pledges_left
+        tier_name, //tier_name
+        price, //price
+        description, //description
+        contributions //remaining
     };
 
-    //emplace in order by price
-    //vector<tier> new_tiers = emplace_tier_in_order(new_tier, proj.tiers);
     vector<tier> new_tiers = proj.tiers;
     new_tiers.emplace_back(new_tier);
 
@@ -261,6 +346,10 @@ void grassroots::readyproject(name project_name, name creator, uint8_t length_in
     });
 }
 
+void grassroots::closeproject(name project_name, name creator) {
+    //TODO: implement
+}
+
 void grassroots::rmvproject(name project_name, name creator) {
     //get project
     projects projects(get_self(), get_self().value);
@@ -269,6 +358,7 @@ void grassroots::rmvproject(name project_name, name creator) {
     //authenticate
     require_auth(creator);
     check(creator == proj.creator, "only project creator can remove the project");
+    //check(proj.project_status == SETUP, "cannot remove project after setup");
 
     //remove project
     projects.erase(proj);
@@ -320,13 +410,13 @@ void grassroots::catch_transfer(name from, asset amount) {
         //emplace new account, ram paid by contract
         accounts.emplace(get_self(), [&](auto& row) {
             row.account_name = from;
-            row.unspent_balance = amount;
-            row.spent_balance = asset(0, TLOS_SYM);
+            row.balance = amount;
+            row.dividends = asset(0, ROOT_SYM);
         });
     } else { //account found
-        //update unspent balance
+        //update balance
         accounts.modify(acc, same_payer, [&](auto& row) {
-            row.unspent_balance += amount;
+            row.balance += amount;
         });
     }
 }
@@ -348,8 +438,8 @@ extern "C"
         {
             switch (action)
             {
-                EOSIO_DISPATCH_HELPER(grassroots, (newaccount)(newpledge)(unpledge)(withdraw)
-                    (newproject)(addtier)(updateinfo)(readyproject)(rmvproject));
+                EOSIO_DISPATCH_HELPER(grassroots, (newaccount)(contribute)(uncontribute)(donate)(rmvaccount)(withdraw)
+                    (newproject)(addtier)(updateinfo)(readyproject)(closeproject)(rmvproject));
             }
 
         } else if (code == name("eosio.token").value && action == name("transfer").value) {
