@@ -239,7 +239,7 @@ void grassroots::newproject(name project_name, name category, name creator,
 
     vector<tier> blank_tiers;
 
-    //emplace new project, ram paid by user
+    //emplace new project, ram paid by creator
     projects.emplace(creator, [&](auto& row) {
         row.project_name = project_name;
         row.category = category;
@@ -254,11 +254,6 @@ void grassroots::newproject(name project_name, name category, name creator,
         row.end_time = 0;
         row.project_status = SETUP;
         row.last_edit = now();
-    });
-
-    //charge fee
-    accounts.modify(acc, same_payer, [&](auto& row) {
-        row.balance -= PROJECT_FEE;
     });
 }
 
@@ -331,6 +326,10 @@ void grassroots::readyproject(name project_name, name creator, uint8_t length_in
     projects projects(get_self(), get_self().value);
     auto& proj = projects.get(project_name.value, "project not found");
 
+    //get account
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(creator.value, "account not found");
+
     //authenticate
     require_auth(creator);
     check(creator == proj.creator, "only project creator can ready the project");
@@ -345,6 +344,11 @@ void grassroots::readyproject(name project_name, name creator, uint8_t length_in
         row.end_time = now() + uint32_t(length_in_days * 86400);
         row.project_status = OPEN;
         row.last_edit = now();
+    });
+
+    //charge project fee
+    accounts.modify(acc, same_payer, [&](auto& row) {
+        row.balance -= PROJECT_FEE;
     });
 }
 

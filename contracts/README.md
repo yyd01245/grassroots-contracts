@@ -88,6 +88,8 @@ To leave a field unchanged, leave it blank. **In Development...**
 
 After project setup is complete, the last thing needed to do is to ready the project by calling the `grassroots::readyproject` action.
 
+Note that there is a non-refundable `25.0 TLOS` fee for readying a project, as this action is committing it to a crowdfunding campaign.
+
 * `readyproject`(name project_name, name creator, uint8_t length_in_days)
 
     `project_name` is the name of the project to ready.
