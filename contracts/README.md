@@ -164,7 +164,7 @@ By Category: `cleos get table grassrootsio grassrootsio projects --lower categor
 
 * `marketing` : Fund marketing campaigns that promote a business or community.
 
-## Make A Contribution
+### Make A Contribution
 
 To purchase a tier from a project simply call the `grassroots::contribute` action and supply the requisite information for your purchase.
 
@@ -180,7 +180,7 @@ To purchase a tier from a project simply call the `grassroots::contribute` actio
 
 Upon execution, the action will find the requested tier and bill the contributor's account for the tier price. This contribution can be refunded to the contributor as long as the project hasn't reached funding.
 
-## Make a Donation
+### Make a Donation
 
 To simply donate to a project without making a purchase, call the `grassroots::donate` action.
 
