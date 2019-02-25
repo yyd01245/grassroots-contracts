@@ -1,4 +1,4 @@
-# Grassroots
+# Grassroots Contract API
 
 Grassroots is a crowdfunding development platform for EOSIO software. It allows account holders to vote native system tokens to fund projects, applications, campaigns, or even research and development.
 
@@ -10,19 +10,23 @@ In order to `unallocate` funds from a project, the user simply calls an action a
 
 Creating an account in Grassroots is as simple as calling the `grassroots::newaccount` action. This will create a zero-balance entry to store your future TLOS balance as well as dividends earned through use of the platform.
 
-Additionally, users can create an account by simply making a regular `eosio.token::transfer` to the `grassrootsio` account with a memo of "newaccount". This will create a balance entry with RAM paid for by Grassroots, but will charge the creation of the account with a `0.1 TLOS` before placing the remainder of the transfer in the new account balance.
+* `newaccount`(name new_account_name)
+
+    `new_account_name` is the name of the account to be created in Grassroots. Currently users must enter their own account names into this field.
+
+Additionally, users can create an account by simply making a regular `eosio.token::transfer` to the `grassrootsio` account with a memo of "newaccount". This will create a balance entry with RAM paid for by Grassroots, but will charge the creation of the account with a `0.1 TLOS` fee before placing the remainder of the transfer into the new account balance.
 
 After creating a Grassroots account, all future `eosio.token::transfers` to `grassrootsio` will be caught by the contract and placed in the sender's Grassroots account.
 
 ## Creating a Project
 
-Project creation in Grassroots is simple, just follow along this track:
+Project creation in Grassroots is simple, just follow this track:
 
 ### Project Setup
 
 Creating a new project in Grassroots is easy and can be done by simply calling the `grassroots::newproject` action.
 
-When setting string variables, use markdown format.
+When setting string variables, use markdown format. Grassroots React components are configured to parse markdown.
 
 * `newproject`(name project_name, name category,   name creator, string title, string      description, string info_link, asset requested)
 
