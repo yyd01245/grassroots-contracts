@@ -134,11 +134,15 @@ Projects can be cancelled at any time before being readied. The RAM spent by emp
 
 ## Contributing to Projects
 
-Below is a guide to interacting with the Grassroots platform and contributing to projects.
+Below is a guide to interacting with the Grassroots platform and contributing to projects as a general user.
 
 ### Discover Projects
 
 Browse a huge project catalogue with a wide variety of categories.
+
+All: `cleos get table grassrootsio grassrootsio projects`
+
+By Category: `cleos get table grassrootsio grassrootsio projects --lower category --key-type i64 --index 2`
 
 * `games` : Create the next big blockchain-based game, or maybe just a game of checkers.
 
@@ -160,13 +164,13 @@ Browse a huge project catalogue with a wide variety of categories.
 
 * `marketing` : Fund marketing campaigns that promote a business or community.
 
-## Purchasing Tiers
+## Make A Contribution
 
 To purchase a tier from a project simply call the `grassroots::contribute` action and supply the requisite information for your purchase.
 
 * `contribute(name project_name, name tier_name, name contributor, string memo)`
 
-    `project_name` is the name of the project to contribute to.
+    `project_name` is the name of the project receiving the contribution.
 
     `tier_name` is the name of the tier to purchase.
 
@@ -174,11 +178,11 @@ To purchase a tier from a project simply call the `grassroots::contribute` actio
 
     `memo` is a short message for the project creator.
 
-Upon execution, the action will find the requested tier and bill the contirbutor's account for the tier price. This contribution will be returned to the contributor if the project fails to reach the requested funding level. **In Development**
+Upon execution, the action will find the requested tier and bill the contributor's account for the tier price. This contribution can be refunded to the contributor as long as the project hasn't reached funding.
 
 ## Make a Donation
 
-To simply make a donation to a project without purchasing a tier, call the `grassroots::donate` action.
+To simply donate to a project without making a purchase, call the `grassroots::donate` action.
 
 * `donate(name project_name, name donor, asset amount, string memo)`
 
@@ -196,15 +200,15 @@ Contributions can be refunded back to the contributor at any time as long as the
 
 * `refund(name project_name, name contributor, name tier_name)`
 
-    `project_name` is the name of the project to which the contribution to refund was made.
+    `project_name` is the name of the project to which the contribution was made.
 
     `contributor` is the name of the Grassroots account that made the contribution.
 
-    `tier_name` is the name of the tier purchase to refund.
+    `tier_name` is the name of the purchased tier to refund.
 
 ### Withdraw Funds
 
-To withdraw funds from your Grassroots balance back to a regular `eosio.token` balance, simply call the `grassroots::withdraw` action. Users can withdraw an amount up to their Grassroots account balance.
+To withdraw funds from a Grassroots balance back to a regular `eosio.token` balance, simply call the `grassroots::withdraw` action. Users can withdraw an amount up to their Grassroots account balance.
 
 * `withdraw(name account_name, asset amount)`
 
