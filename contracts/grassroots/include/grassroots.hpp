@@ -1,5 +1,5 @@
 /**
- * 
+ * Grassroots is a crowd-funding development platform for EOSIO software.
  * 
  * @author Craig Branscom
  * @copyright 
@@ -7,11 +7,10 @@
 
 #pragma once
 #include <eosiolib/eosio.hpp>
-// #include <eosiolib/permission.hpp>
-// #include <eosiolib/asset.hpp>
-// #include <eosiolib/action.hpp>
-// #include <eosiolib/singleton.hpp>
-// #include <eosiolib/transaction.hpp>
+#include <eosiolib/permission.hpp>
+#include <eosiolib/asset.hpp>
+#include <eosiolib/action.hpp>
+#include <eosiolib/transaction.hpp>
 
 using namespace std;
 using namespace eosio;
@@ -24,83 +23,138 @@ public:
 
     ~grassroots();
 
-    //symbol const SYM = symbol("ROOTS", 3); //probs not
+    //const symbol EOS_SYM = symbol("EOS", 4);
+    //const symbol BOS_SYM = symbol("BOS", 4);
 
-    //name const ADMIN_NAME = name("grassrootsio");
+    const name ADMIN_NAME = name("grassrootsio");
+    const symbol TLOS_SYM = symbol("TLOS", 4);
+    const symbol ROOT_SYM = symbol("ROOT", 0);
+    const asset PROJECT_FEE = asset(250000, TLOS_SYM); //25 TLOS
+    const asset RAM_FEE = asset(1000, TLOS_SYM);
 
-    /**
-     * 
-     * 
-     * @scope account.value
-     */
-    struct [[eosio::table]] account {
-        name account_name;
-        asset staked_balance;
-        asset spent_balance;
-        //asset dividends;
+    struct tier {
+        name tier_name;
+        asset price;
+        string description;
+        uint16_t remaining;
 
-        uint64_t primary_key() const { return account_name.value; }
-        //TODO: EOSLIB_SERIALIZE(account, ) 
+        EOSLIB_SERIALIZE(tier, (tier_name)(price)(description)(remaining))
+    };
+
+    enum PROJECT_STATUS : uint8_t {
+        SETUP, //0
+        OPEN, //1
+        FUNDED, //2
+        FAILED //3
     };
 
 
-    /**
-     * 
-     * 
-     */
-    struct tier {
-        asset threshold;
-        string reward_info;
-    }
+    //@scope get_self().value
+    TABLE account {
+        name account_name;
+        asset balance;
+        asset dividends;
 
-    /**
-     * 
-     * 
-     * @scope get_self().value
-     * @key project_name.value
-     */
-    struct [[eosio::table]] project {
+        uint64_t primary_key() const { return account_name.value; }
+        EOSLIB_SERIALIZE(account, (account_name)(balance)(dividends))
+    };
+
+    //@scope get_self().value
+    TABLE project {
         name project_name;
+        name category;
         name creator;
+
+        string title;
+        string description;
+        string info_link;
+
+        vector<tier> tiers;
         asset requested;
         asset received;
-        string info_link;
+
         uint32_t begin_time;
         uint32_t end_time;
+        uint8_t project_status;
         uint32_t last_edit;
 
         uint64_t primary_key() const { return project_name.value; }
-        //TODO: EOSLIB_SERIALIZE(project, )
+        uint64_t by_cat() const { return category.value; }
+        //TODO: make by_creator() index?
+        //TODO: make by_end_time() index?
+        EOSLIB_SERIALIZE(project, (project_name)(category)(creator)
+            (title)(description)(info_link)
+            (tiers)(requested)(received)
+            (begin_time)(end_time)(project_status)(last_edit))
     };
 
-    typedef multi_index<name("accounts"), account> accounts_table;
+    //@scope get_self().value
+    TABLE contribution {
+        uint64_t contrib_id;
+        name project_name;
+        name contributor;
+        name tier_name;
+        //asset price;
 
-    typedef multi_index<name("projects"), project> projects_table;
+        uint64_t primary_key() const { return contrib_id; }
+        uint64_t by_project() const { return project_name.value; }
+        uint64_t by_account() const { return contributor.value; }
+        uint128_t by_contrib() const {
+			uint128_t proj_name = static_cast<uint128_t>(project_name.value);
+			uint128_t acc_name = static_cast<uint128_t>(contributor.value);
+			return (proj_name << 64) | acc_name;
+		}
+        EOSLIB_SERIALIZE(contribution, (contrib_id)(project_name)(contributor)(tier_name))
+    };
+
+    typedef multi_index<name("accounts"), account> accounts;
+
+    typedef multi_index<name("projects"), project,
+        indexed_by<name("bycategory"), const_mem_fun<project, uint64_t, &project::by_cat>>
+        > projects;
+
+    typedef multi_index<name("contribs"), contribution,
+        indexed_by<name("byproject"), const_mem_fun<contribution, uint64_t, &contribution::by_project>>,
+        indexed_by<name("byaccount"), const_mem_fun<contribution, uint64_t, &contribution::by_account>>,
+        indexed_by<name("bycontrib"), const_mem_fun<contribution, uint128_t, &contribution::by_contrib>>
+        > contributions;
 
 
-    [[eosio::action]]
-    void newaccount(name new_account);
+    ACTION newaccount(name new_account_name);
 
-    [[eosio::action]]
-    void deposit();
+    ACTION contribute(name project_name, name tier_name, name contributor, string memo);
 
-    [[eosio::action]]
-    void withdraw();
+    ACTION refund(name project_name, name contributor, name tier_name);
 
-    [[eosio::action]]
-    void backproject(name project_name, asset amount);
+    ACTION donate(name project_name, name donor, asset amount, string memo);
 
-    [[eosio::action]]
-    void returnfunds(name project_name, asset amount);
+    ACTION cancelacc(name account_name);
+
+    ACTION withdraw(name account_name, asset amount);
+
+    ACTION newproject(name project_name, name category, name creator,
+        string title, string description, string info_link, asset requested);
+
+    ACTION addtier(name project_name, name creator, 
+        name tier_name, asset price, string description, uint16_t contributions);
+
+    ACTION editproject(name project_name, name creator,
+        string new_title, string new_desc, string new_link, asset new_requested);
+
+    ACTION readyproject(name project_name, name creator, uint8_t length_in_days);
+
+    ACTION closeproject(name project_name, name creator);
+
+    ACTION cancelproj(name project_name, name creator);
 
 
-    [[eosio::action]]
-    void newproject(name project_name, asset requested, string info_link);
+    //Functions
+    bool is_valid_category(name category);
+    bool is_tier_in_project(name tier_name, vector<tier> tiers);
+    int get_tier_idx(name tier_name, vector<tier> tiers);
 
-    [[eosio::action]]
-    void editproject();
 
-    [[eosio::action]]
-    void rmvproject(name project_name, name creator);
+    //Reactions
+    void catch_transfer(name from, asset amount, string memo);
 
 };
