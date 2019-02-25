@@ -128,7 +128,7 @@ public:
 
     ACTION donate(name project_name, name donor, asset amount, string memo);
 
-    ACTION rmvaccount(name account_name);
+    ACTION cancelacc(name account_name);
 
     ACTION withdraw(name account_name, asset amount);
 
@@ -145,7 +145,7 @@ public:
 
     ACTION closeproject(name project_name, name creator);
 
-    ACTION rmvproject(name project_name, name creator);
+    ACTION cancelproj(name project_name, name creator);
 
 
     //Functions
