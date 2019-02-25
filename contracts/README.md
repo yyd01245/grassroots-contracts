@@ -104,7 +104,11 @@ After readying the project simply wait for contributions and donations to roll i
 
 After the project's contribution/donation period is over, the project must be closed to determine whether the project was funded or not.
 
-* `closeproject`
+* `closeproject(name project_name, name creator)`
+
+    `project_name` is the name of the project to close.
+
+    `creator` is the name of the project creator. Only this account is authorized to close the project.
 
 ## Contributing to Projects
 
@@ -138,7 +142,7 @@ Browse a huge project catalogue with a wide variety of categories.
 
 To purchase a tier from a project simply call the `grassroots::contribute` action and supply the requisite information for your purchase.
 
-* `contribute`(name project_name, name tier_name, name contributor, string memo)
+* `contribute(name project_name, name tier_name, name contributor, string memo)`
 
     `project_name` is the name of the project to contribute to.
 
@@ -154,7 +158,7 @@ Upon execution, the action will find the requested tier and bill the contirbutor
 
 To simply make a donation to a project without purchasing a tier, call the `grassroots::donate` action.
 
-* `donate`(name project_name, name donor, asset amount, string memo)
+* `donate(name project_name, name donor, asset amount, string memo)`
 
     `project_name` is the name of the project to donate to.
 
@@ -166,6 +170,24 @@ To simply make a donation to a project without purchasing a tier, call the `gras
 
 ### Refund a Contribution
 
-* `refund`
+Contributions can be refunded back to the contributor at any time as long as the project's contribution period is still open and the project hasn't reached the requested funding level.
 
+* `refund(name project_name, name contributor, name tier_name)`
 
+    `project_name` is the name of the project to which the contribution to refund was made.
+
+    `contributor` is the name of the Grassroots account that made the contribution.
+
+    `tier_name` is the name of the tier purchase to refund.
+
+### Withdraw Funds
+
+To withdraw funds from your Grassroots balance back to a regular `eosio.token` balance, simply call the `grassroots::withdraw` action. Users can withdraw an amount up to their Grassroots account balance.
+
+* `withdraw(name account_name, asset amount)`
+
+    `account_name` is the name of the Grassroots account to withdraw from. Only the owner of the account can withdraw from it.
+
+    `amount` is the amount of `TLOS` to withdraw from the account.
+
+Keep in mind that contributions and donations are pulled from your Grassroots balance, and users can always `refund` a contribution made to a project to recover their funds, provided the project hasn't reached funding.
