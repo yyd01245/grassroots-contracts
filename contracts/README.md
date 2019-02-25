@@ -2,21 +2,23 @@
 
 Grassroots is a crowdfunding development platform for EOSIO software. It allows account holders to vote native system tokens to fund projects, applications, campaigns, or even research and development.
 
-Funds are sent to the contract and staked to the user's account. The user can then allocate an amount of tokens to projects as they see fit. A user can `reclaim` any unallocated system tokens out of the contract and back to their eosio.token account at any time.
+Funds are sent to the contract and staked to the user's account. The user can then allocate an amount of tokens to projects as they see fit. A user can `withdraw` any unallocated system tokens out of the contract and back to their regular eosio.token account at any time.
 
-In order to `unallocate` funds from a project, the user simply calls an action and specifies the proposal along with the amount to unallocate. Funds unallocated return to the contract wallet and can then either be reallocated to another project or reclaimed.
+In order to unallocate funds from a project, the user simply calls the `refund` action and specifies the proposal along with the tier level purchased. Refunds return to the contract wallet and can then either be contributed to another project or withdrawn.
 
 ## Create an Account
 
 Creating an account in Grassroots is as simple as calling the `grassroots::newaccount` action. This will create a zero-balance entry to store your future TLOS balance as well as dividends earned through use of the platform.
 
-* `newaccount`(name new_account_name)
+* `newaccount(name new_account_name)`
 
     `new_account_name` is the name of the account to be created in Grassroots. Currently users must enter their own account names into this field.
 
-Additionally, users can create an account by simply making a regular `eosio.token::transfer` to the `grassrootsio` account with a memo of "newaccount". This will create a balance entry with RAM paid for by Grassroots, but will charge the creation of the account with a `0.1 TLOS` fee before placing the remainder of the transfer into the new account balance.
+Additionally, users can create an account by simply making a regular `eosio.token::transfer` to the `grassrootsio` account with a memo of "newaccount". This will create a balance entry with RAM paid for by Grassroots, but will charge an account creation fee of `0.1 TLOS` before placing the remainder of the transfer into the newly created account.
 
 After creating a Grassroots account, all future `eosio.token::transfers` to `grassrootsio` will be caught by the contract and placed in the sender's Grassroots account.
+
+A user's Grassroots account is their operating balance for all actions on the platform, meaning all contributions, donations, and fees are pulled from this account. If at any time a user experiences an `insufficient balance` error, they can simply transfer more `TLOS` to `grassrootsio` and debit their account.
 
 ## Creating a Project
 
@@ -24,15 +26,15 @@ Project creation in Grassroots is simple, just follow this track:
 
 ### Project Setup
 
-Creating a new project in Grassroots is easy and can be done by simply calling the `grassroots::newproject` action.
+Creating a new project in Grassroots is done by calling the `grassroots::newproject` action.
 
-When setting string variables, use markdown format. Grassroots React components are configured to parse markdown.
+When setting string variables, please use markdown format. Grassroots React components are configured to parse markdown.
 
-* `newproject`(name project_name, name category,   name creator, string title, string      description, string info_link, asset requested)
+* ```newproject(name project_name, name category,   name creator, string title, string      description, string info_link, asset requested)```
 
-    `project_name` is the name of the new project. The project name must conform to the `eosio::name` encoding (a-z1-5).
+    `project_name` is the name of the new project. The project name must conform to the `eosio::name` encoding (a-z1-5, max 12 characters).
 
-    `category` is the category for the new project. Select the category from the available list.
+    `category` is the category for the new project. Select the category from the available list below.
 
     `creator` is the name of the creator, and must be the signer of this action.
 
@@ -44,11 +46,13 @@ When setting string variables, use markdown format. Grassroots React components 
 
     `requested` is the amount of `TLOS` requested to fund the project.
 
+Available categories: `games, apps, research, tools, environment, video, music, expansion, products, marketing`
+
 ### Add Tiers
 
-After creating the new project, the project creator can now add tiers to the project for contributors to purchase. Each tier can be seen as a purchase package when bundled with reward(s) outlined in the project description.
+After creating the new project, the project creator can now add tiers for contributors to purchase. Each tier can be seen as a package when bundled with reward(s) outlined in the project description.
 
-If a project is readied without any tiers, it cannot receive contributions and can only receive direct donations through the `grassroots::donate` action.
+Note that if a project is readied without any tiers, it cannot receive contributions and can only receive direct donations through the `grassroots::donate` action.
 
 * `addtier`(name project_name, name creator, name tier_name, asset price, string description, uint16_t contributions)
 
@@ -64,11 +68,13 @@ If a project is readied without any tiers, it cannot receive contributions and c
 
     `contributions` is the total number of contributions accepted at this tier. Each contribution to this tier will decrement the remaining contributions.
 
+* `removetier()`
+
+    **In Development...**
+
 ### Make the Final Touches
 
 If any edits need to be made they must be done before readying the project. Once a project is readied it can no longer be edited by the project creator until the contribution/donation period is over. To edit the project, simply call the `grassroots::editproject` action.
-
-To leave a field unchanged, leave it blank. **In Development...**
 
 * `editproject`(name project_name, name creator, string new_title, string new_desc, string new_link, asset new_requested)
 
@@ -84,33 +90,47 @@ To leave a field unchanged, leave it blank. **In Development...**
 
     `new_requested` is the new requested amount for the project.
 
+To leave a field unchanged, type "none" in its field. **In Development...**
+
 ### Ready the Project
 
-After project setup is complete, the last thing needed to do is to ready the project by calling the `grassroots::readyproject` action.
+After project setup is complete, the final step is to ready the project by calling the `grassroots::readyproject` action.
 
-Note that there is a non-refundable `25.0 TLOS` fee for readying a project, as this action is committing it to a crowdfunding campaign.
+Note that there is a non-refundable `25 TLOS` fee for readying a project.
 
-* `readyproject`(name project_name, name creator, uint8_t length_in_days)
+* `readyproject(name project_name, name creator, uint8_t length_in_days)`
 
-    `project_name` is the name of the project to ready.
+    `project_name` is the name of the project to be readied.
 
     `creator` is the name of the project creator. Only this account is authorized to ready the project.
 
-    `length_in_days` is the length in days that the project contribution/donation period will be open, from the time the readyproject action is called.
+    `length_in_days` is the number of days that the project contribution/donation period will be open, from the time the readyproject action is called.
 
 ### Wait for Contributions/Donations
 
-After readying the project simply wait for contributions and donations to roll in. Make sure people know about your project!
+After readying the project, simply wait for contributions and donations to roll in. Make sure people know about your project!
 
 ### Close the Project
 
 After the project's contribution/donation period is over, the project must be closed to determine whether the project was funded or not.
+
+This action can't be called until the contribution/donation period is over.
 
 * `closeproject(name project_name, name creator)`
 
     `project_name` is the name of the project to close.
 
     `creator` is the name of the project creator. Only this account is authorized to close the project.
+
+### Cancelling the Project
+
+Projects can be cancelled at any time before being readied. The RAM spent by emplacing the project info is also returned to the project creator.
+
+* `cancelproj(name project_name, name creator)`
+
+    `project_name` is the name of the project being cancelled.
+
+    `creator` is the name of the project creator. Only this account is authorized to cancel the project.
 
 ## Contributing to Projects
 
