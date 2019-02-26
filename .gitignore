@@ -44,3 +44,4 @@ build/*
 
 # Local Environment
 .vscode/*
+testwallet.txt
