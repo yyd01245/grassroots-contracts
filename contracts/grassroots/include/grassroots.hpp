@@ -25,12 +25,13 @@ public:
 
     //const symbol EOS_SYM = symbol("EOS", 4);
     //const symbol BOS_SYM = symbol("BOS", 4);
+    const symbol TLOS_SYM = symbol("TLOS", 4);
 
     const name ADMIN_NAME = name("grassrootsio");
-    const symbol TLOS_SYM = symbol("TLOS", 4);
     const symbol ROOT_SYM = symbol("ROOT", 0);
     const asset PROJECT_FEE = asset(250000, TLOS_SYM); //25 TLOS
     const asset RAM_FEE = asset(1000, TLOS_SYM);
+    //TODO: const symbol CORE_SYM = get_core_sym();
 
     struct tier {
         name tier_name;
@@ -130,9 +131,9 @@ public:
     ACTION editproject(name project_name, name creator,
         string new_title, string new_desc, string new_link, asset new_requested);
 
-    ACTION openproject(name project_name, name creator, uint8_t length_in_days);
+    ACTION openfunding(name project_name, name creator, uint8_t length_in_days);
 
-    ACTION closeproject(name project_name, name creator);
+    ACTION closefunding(name project_name, name creator);
 
     ACTION deleteproj(name project_name, name creator);
 
