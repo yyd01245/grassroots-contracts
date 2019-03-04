@@ -33,7 +33,7 @@ public:
     const name ADMIN_NAME = name("gograssroots");
     const symbol ROOT_SYM = symbol("ROOT", 0);
     const asset PROJECT_FEE = asset(250000, CORE_SYM); //25 TLOS
-    const asset REGISTER_FEE = asset(1000, CORE_SYM); //0.1 TLOS
+    const asset RAM_FEE = asset(1000, CORE_SYM); //0.1 TLOS
 
     enum PROJECT_STATUS : uint8_t {
         SETUP, //0
@@ -74,14 +74,15 @@ public:
 
     //TODO: creator stats? creator table?
 
-    //@scope name.value
+    //@scope get_self().value
     //@ram 
-    TABLE account { //profile?
+    TABLE account { //rename to profile?
+        name account_name;
         asset balance;
         asset dividends;
 
-        uint64_t primary_key() const { return balance.symbol.raw(); }
-        EOSLIB_SERIALIZE(account, (balance)(dividends))
+        uint64_t primary_key() const { return account_name.value; }
+        EOSLIB_SERIALIZE(account, (account_name)(balance)(dividends))
     };
 
     //@scope project_name.value
@@ -169,7 +170,9 @@ public:
     //marks a project as cancelled and releases all funds received, if any
     ACTION cancelproj(name project_name, name creator);
 
-    //TODO: make a deleteproj action
+    //deletes a project completely
+    //can only be called before funding is open
+    ACTION deleteproj(name project_name, name creator);
 
    //======================== account actions ========================
 
@@ -221,12 +224,6 @@ public:
 
     //returns true if parameter name is a valid category
     bool is_valid_category(name category);
-
-    //adds dividends to an account
-    void add_dividends(name account_name, asset dividends);
-
-    //subtracts dividends from an account
-    void sub_dividends(name account_name, asset dividends);
 
     //========== reactions ==========
 

@@ -25,8 +25,8 @@ void grassroots::newproject(name project_name, name category, name creator,
     auto proj = projects.find(project_name.value);
 
     //get account
-    accounts accounts(get_self(), creator.value);
-    auto& acc = accounts.get(CORE_SYM.raw(), "account not registered");
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(creator.value, "account not registered");
 
     //validate
     check(proj == projects.end(), "project name already taken");
@@ -124,12 +124,12 @@ void grassroots::openfunding(name project_name, name creator, uint8_t length_in_
     auto& proj = projects.get(project_name.value, "project not found");
 
     //get account
-    accounts accounts(get_self(), creator.value);
-    auto& acc = accounts.get(CORE_SYM.raw(), "account not registered");
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(creator.value, "account not registered");
 
     //authenticate
     require_auth(creator);
-    check(creator == proj.creator, "only project creator can ready the project");
+    check(creator == proj.creator, "only project creator can open project for funding");
 
     //validate
     check(length_in_days >= 1 && length_in_days <= 180, "project length must be between 1 and 180 days");
@@ -203,6 +203,20 @@ void grassroots::cancelproj(name project_name, name creator) {
     });
 }
 
+void grassroots::deleteproj(name project_name, name creator) {
+    //get project
+    projects projects(get_self(), get_self().value);
+    auto& proj = projects.get(project_name.value, "project not found");
+
+    //authenticate
+    require_auth(creator);
+    check(creator == proj.creator, "only project creator can delete the project");
+    check(proj.project_status == SETUP, "can only delete projects in SETUP");
+
+    //delete project
+    projects.erase(proj);
+}
+
 //======================== account actions ========================
 
 void grassroots::registeracct(name account_name) {
@@ -210,46 +224,48 @@ void grassroots::registeracct(name account_name) {
     require_auth(account_name);
 
     //check account doesn't already exist
-    accounts accounts(get_self(), account_name.value);
-    auto acc = accounts.find(CORE_SYM.code().raw());
+    accounts accounts(get_self(), get_self().value);
+    auto acc = accounts.find(account_name.value);
     check(acc == accounts.end(), "account is already registered");
 
     //emplace new account, ram paid by user
     accounts.emplace(account_name, [&](auto& row) {
+        row.account_name = account_name;
         row.balance = asset(0, CORE_SYM);
         row.dividends = asset(0, ROOT_SYM);
     });
 }
 
 void grassroots::donate(name project_name, name donor, asset amount, string memo) {
-    //authenticate
-    require_auth(donor);
-    
     //get project
     projects projects(get_self(), get_self().value);
     auto& proj = projects.get(project_name.value, "project not found");
 
     //get account
-    accounts accounts(get_self(), donor.value);
-    auto& acc = accounts.get(CORE_SYM.raw(), "account not registered");
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(donor.value, "account not registered");
 
     //find donation
     donations donations(get_self(), project_name.value);
     auto don = donations.find(donor.value);
 
+    //authenticate
+    require_auth(donor);
+    check(acc.account_name == donor, "cannot donate from someone else's account");
+
     //validate
-    check(proj.project_status == OPEN, "project is not open for funding at this time");
+    check(proj.project_status == OPEN, "project is not open for funding");
     check(proj.end_time > now(), "project funding is over");
     check(amount > asset(0, CORE_SYM), "must donate a positive amount");
     check(acc.balance >= amount, "insufficient balance");
 
     uint8_t new_status = proj.project_status;
-    uint32_t new_donors = proj.donors;
+    uint32_t new_donors = 0;
 
     //update donations
     if (don == donations.end()) { //donation not found for project
         //increment project donors
-        new_donors += 1;
+        new_donors = 1;
 
         //empalce new donation
         donations.emplace(donor, [&](auto& row) {
@@ -403,8 +419,8 @@ void grassroots::withdraw(name account_name, asset amount) {
     require_auth(account_name);
     
     //get account
-    accounts accounts(get_self(), account_name.value);
-    auto& acc = accounts.get(CORE_SYM.raw(), "account not registered");
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(account_name.value, "account not registered");
 
     //validate
     check(acc.balance >= amount, "insufficient balance");
@@ -415,6 +431,7 @@ void grassroots::withdraw(name account_name, asset amount) {
         row.balance -= amount;
     });
 
+    //transfer to eosio.token
     //inline trx requires gograssroots@active to have gograssroots@eosio.code
     action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
 		get_self(), //from
@@ -425,27 +442,32 @@ void grassroots::withdraw(name account_name, asset amount) {
 }
 
 void grassroots::deleteacct(name account_name) {
+    //get account
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(account_name.value, "account not registered");
+
     //authenticate
     require_auth(account_name);
+    check(acc.account_name == account_name, "cannot withdraw from someone else's account");
+
+    //have to save account params for inline, can't read acc to fill params after erase
+    auto to = acc.account_name;
+    auto quantity = acc.balance;
+
+    //TODO: forfeit dividends to @gograssroots
     
-    //get account
-    accounts accounts(get_self(), account_name.value);
-    auto& acc = accounts.get(CORE_SYM.raw(), "account not registered");
 
-    //forfeit dividends to @gograssroots
-    sub_dividends(account_name, acc.dividends);
-    add_dividends(name("gograssroots"), acc.dividends);
-
-    //transfer balance back to eosio.token
-    action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
-		get_self(), //from
-		account_name, //to
-		acc.balance, //quantity
-        std::string("balance from cancelled account") //memo
-	)).send();
-
-    //remove account
+    //delete account
     accounts.erase(acc);
+
+    //transfer remaining balance back to eosio.token
+    //inline trx requires gograssroots@active to have gograssroots@eosio.code
+    // action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
+	// 	get_self(), //from
+	// 	to, //to
+	// 	quantity, //quantity
+    //     std::string("balance from cancelled account") //memo
+	// )).send();
 }
 
 //========== functions ==========
@@ -467,56 +489,27 @@ bool grassroots::is_valid_category(name category) {
     return false;
 }
 
-void grassroots::add_dividends(name account_name, asset dividends) {
-    //get account
-    accounts accounts(get_self(), get_self().value);
-    auto& acc = accounts.get(account_name.value, "account not found");
-
-    //validate
-    check(dividends.symbol == ROOT_SYM, "can only add ROOT as dividends");
-    check(dividends.amount >= 0, "can only add a positive amount");
-
-    //update balances
-    accounts.modify(acc, same_payer, [&](auto& row) {
-        row.dividends += dividends;
-    });
-}
-
-void grassroots::sub_dividends(name account_name, asset dividends) {
-    //get account
-    accounts accounts(get_self(), get_self().value);
-    auto& acc = accounts.get(account_name.value, "account not found");
-
-    //validate
-    check(dividends.symbol == ROOT_SYM, "can only add ROOT as dividends");
-    check(dividends.amount >= 0, "can only subtract a positive amount");
-
-    //update balances
-    accounts.modify(acc, same_payer, [&](auto& row) {
-        row.dividends -= dividends;
-    });
-}
-
 //========== reactions ==========
 
 void grassroots::catch_transfer(name from, asset amount, string memo) {
     //check for account
-    accounts accounts(get_self(), from.value);
-    auto acc = accounts.find(CORE_SYM.raw());
+    accounts accounts(get_self(), get_self().value);
+    auto acc = accounts.find(from.value);
 
-    if (acc == accounts.end() && memo == "registeracct") { //no account found, register new account
-        //check amount covers fee
-        check(amount >= REGISTER_FEE, "must transfer at least 0.1 TLOS to cover registration fee");
-
-        //emplace new account, ram paid by contract
-        accounts.emplace(get_self(), [&](auto& row) {
-            row.balance = amount - REGISTER_FEE;
-            row.dividends = asset(0, ROOT_SYM);
-        });
-    } else { //account found
+    if (acc != accounts.end()) { //account is registered
         //update balance
         accounts.modify(acc, same_payer, [&](auto& row) {
             row.balance += amount;
+        });
+    } else if (acc == accounts.end() && memo == "registeracct") { //register new account
+        //check amount covers fee
+        check(amount >= RAM_FEE, "must transfer at least 0.1 TLOS to cover ram fee");
+
+        //emplace new account, ram paid by contract
+        accounts.emplace(get_self(), [&](auto& row) {
+            row.account_name = from;
+            row.balance = amount - RAM_FEE;
+            row.dividends = asset(0, ROOT_SYM);
         });
     }
 }
@@ -539,7 +532,7 @@ extern "C"
             switch (action)
             {
                 EOSIO_DISPATCH_HELPER(grassroots, 
-                    (newproject)(openfunding)(cancelproj)
+                    (newproject)(openfunding)(cancelproj)(deleteproj)
                     (registeracct)(donate)(withdraw)(deleteacct));
             }
 
@@ -557,7 +550,6 @@ extern "C"
             if (args.to == grassroots.ADMIN_NAME) {
                 grassroots.catch_transfer(args.from, args.quantity, args.memo);
             }
-            //execute_action<grassroots>(eosio::name(receiver), eosio::name(code), &grassroots::catch_transfer(args.from, args.quantity));
         }
     }
 }
