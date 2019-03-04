@@ -207,7 +207,20 @@ public:
     // ACTION create(name issuer, name category, name token_name, bool fungible, bool
     //     burnable, bool transferable, int64_t max_supply);
 
-    
+    // ACTION issue(name to, name category, name token_name, double quantity, string
+    //     metadata_uri, string memo);
+
+    // ACTION pausexfer(bool pause);
+
+    // ACTION burnnft(name owner, vector<uint64_t> tokeninfo_ids);
+
+    // ACTION burn(name owner, uint64_t global_id, double quantity);
+
+    // ACTION transfernft(name from, name to, vector<uint64_t> tokeninfo_ids, string
+    //     memo);
+
+    // ACTION transfer(name from, name to, uint64_t global_id, double quantity, string
+    //     memo);
 
     //======================== admin actions ========================
 

@@ -501,7 +501,7 @@ void grassroots::catch_transfer(name from, asset amount, string memo) {
         accounts.modify(acc, same_payer, [&](auto& row) {
             row.balance += amount;
         });
-    } else if (acc == accounts.end() && memo == "registeracct") { //register new account
+    } else if (acc == accounts.end() && memo == "register account") { //register new account
         //check amount covers fee
         check(amount >= RAM_FEE, "must transfer at least 0.1 TLOS to cover ram fee");
 
