@@ -23,7 +23,4 @@ fi
 
 #eos v1.7.0
 cleos -u $url set contract $account ./ $contract.wasm $contract.abi -p $account
-#test wallet: PW5JzkDgprrUzjATioEKUdnVH99byHnamU4igex2Pps6Agx62JYht
-#Pub: EOS8XCqRAx44FAzFtMy688jDtrybGHuktnpm8kAHn1XPDYqHJHbZ2
-#Priv: 
 #testing: cleos -u https://api-test.tlos.goodblock.io/ set contract grassrootsio ./ grassroots.wasm grassroots.abi -p grassrootsio
