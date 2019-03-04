@@ -217,3 +217,6 @@ To withdraw funds from a Grassroots balance back to a regular `eosio.token` bala
     `amount` is the amount of `TLOS` to withdraw from the account.
 
 Keep in mind that contributions and donations are pulled from your Grassroots balance, and users can always `refund` a contribution made to a project to recover their funds, provided the project hasn't reached funding.
+
+## Grassroots Content Escrow System
+
