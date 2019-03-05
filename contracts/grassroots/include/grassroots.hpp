@@ -186,13 +186,13 @@ public:
     //reclaims an entire donation from a project
     // ACTION reclaim(name project_name, name donor);
 
-    //contribute to a project and preorder the selected reward
-    // ACTION contribute(name project_name, name contributor, asset amount, string memo);
+    //contribute to a project by preordering the selected reward
+    // ACTION preorder(name project_name, name contributor, asset amount, string memo);
 
-    //refund a contribution from the project back to the contributor
+    //refund a preorder from the project back to the contributor
     // ACTION refund(name project_name, name contributor, name reward);
 
-    //redeems a digital item from a successfully funded project
+    //redeems a dgood from a successfully funded project
     // ACTION redeem(name project_name, name contributor, name reward_name);
 
     //withdraws unspent grassroots balance back to eosio.token account
@@ -202,7 +202,7 @@ public:
     //returns ram and balance bacck to user, forfeits dividends
     ACTION deleteacct(name account_name);
 
-    //======================== digital item actions ========================
+    //======================== dgoods actions ========================
 
     // ACTION create(name issuer, name category, name token_name, bool fungible, bool
     //     burnable, bool transferable, int64_t max_supply);
@@ -216,11 +216,9 @@ public:
 
     // ACTION burn(name owner, uint64_t global_id, double quantity);
 
-    // ACTION transfernft(name from, name to, vector<uint64_t> tokeninfo_ids, string
-    //     memo);
+    // ACTION transfernft(name from, name to, vector<uint64_t> tokeninfo_ids, string memo);
 
-    // ACTION transfer(name from, name to, uint64_t global_id, double quantity, string
-    //     memo);
+    // ACTION transfer(name from, name to, uint64_t global_id, double quantity, string memo);
 
     //======================== admin actions ========================
 

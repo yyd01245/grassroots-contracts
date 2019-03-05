@@ -42,7 +42,7 @@ When setting string variables, please use markdown format. Grassroots React comp
 
 Available categories: `games, apps, research, tools, environment, audio, video, publishing`
 
-<!-- ### Add Tiers
+### Add Tiers
 
 After creating the new project, the project creator can now add tiers for contributors to purchase. Each tier can be seen as a package when bundled with reward(s) outlined in the project description.
 
@@ -64,9 +64,9 @@ Note that if a project is readied without any tiers, it cannot receive contribut
 
 * `removetier()`
 
-    **In Development...** -->
+    **In Development...**
 
-<!-- ### Make the Final Touches
+### Make the Final Touches
 
 If any edits need to be made they must be done before readying the project. Once a project is readied it can no longer be edited by the project creator until the contribution/donation period is over. To edit the project, simply call the `grassroots::editproject` action.
 
@@ -84,7 +84,7 @@ If any edits need to be made they must be done before readying the project. Once
 
     `new_requested` is the new requested amount for the project.
 
-To leave a field unchanged, type "none" in its field. **In Development...** -->
+To leave a field unchanged, type "none" in its field. **In Development...**
 
 ### Ready the Project
 
@@ -102,13 +102,15 @@ Note that there is a `25 TLOS` fee for opening funding on a project.
 
 ### Wait for Contributions/Donations
 
+Blah blah blah
 
 ### Deleting A Project
 
+Blah blah blah
 
 ### Cancelling A Project
 
-
+Blah blah blah
 
 ## Contributing to Projects
 
@@ -162,7 +164,8 @@ To withdraw funds from a Grassroots balance back to a regular `eosio.token` bala
 
     `amount` is the quantity of system tokens to withdraw from the Grasroots account.
 
-
+Blah blah blah
 
 ## Grassroots Content Escrow System
 
+Blah blah blah
