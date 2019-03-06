@@ -97,27 +97,27 @@ public:
 
     //@scope project_name.value
     //@ram
-    // TABLE reward {
-    //     name reward_name;
+    // TABLE item {
+    //     name item_name;
     //     string info;
     //     string meta;
-    //     int64_t supply;
+    //     uint16_t supply;
 
-    //     uint64_t primary_key() const { return reward_name.value; }
-    //     EOSLIB_SERIALIZE(reward, (reward_name)(info)(meta)(supply))
+    //     uint64_t primary_key() const { return item_name.value; }
+    //     EOSLIB_SERIALIZE(item, (item_name)(info)(meta)(supply))
     // };
 
     //@scope project_name.value
     //@ram 
-    // TABLE contribution {
+    // TABLE preorder {
     //     name contributor;
-    //     name reward_name;
+    //     name item_name;
     //     uint8_t quantity;
     //     asset total;
 
     //     uint64_t primary_key() const { return contributor.value; }
     //     uint64_t by_account() const { return contributor.value; }
-    //     uint128_t by_contrib() const {
+    //     uint128_t by_order() const {
 	// 		uint128_t acc_name = static_cast<uint128_t>(contributor.value);
     //         uint128_t rwd_name = static_cast<uint128_t>(reward_name.value);
 	// 		return (acc_name << 64) | rwd_name;
@@ -131,17 +131,17 @@ public:
     typedef multi_index<name("projects"), project,
         indexed_by<name("bycategory"), const_mem_fun<project, uint64_t, &project::by_cat>>,
         indexed_by<name("byendtime"), const_mem_fun<project, uint64_t, &project::by_end_time>>
-        > projects;
+    > projects;
 
     typedef multi_index<name("donations"), donation> donations;
 
-    //rewards
+    //items
 
-    // typedef multi_index<name("contribs"), contribution,
+    // typedef multi_index<name("preorders"), preorder,
     //     indexed_by<name("byproject"), const_mem_fun<contribution, uint64_t, &contribution::by_project>>,
     //     indexed_by<name("byaccount"), const_mem_fun<contribution, uint64_t, &contribution::by_account>>,
-    //     indexed_by<name("bycontrib"), const_mem_fun<contribution, uint128_t, &contribution::by_contrib>>
-    //     > contributions;
+    //     indexed_by<name("byorder"), const_mem_fun<contribution, uint128_t, &contribution::by_order>>
+    // > preorders;
 
     //======================== project actions ========================
 
@@ -186,15 +186,6 @@ public:
     //reclaims an entire donation from a project
     // ACTION reclaim(name project_name, name donor);
 
-    //contribute to a project by preordering the selected reward
-    // ACTION preorder(name project_name, name contributor, asset amount, string memo);
-
-    //refund a preorder from the project back to the contributor
-    // ACTION refund(name project_name, name contributor, name reward);
-
-    //redeems a dgood from a successfully funded project
-    // ACTION redeem(name project_name, name contributor, name reward_name);
-
     //withdraws unspent grassroots balance back to eosio.token account
     ACTION withdraw(name account_name, asset amount);
 
@@ -202,23 +193,16 @@ public:
     //returns ram and balance bacck to user, forfeits dividends
     ACTION deleteacct(name account_name);
 
-    //======================== dgoods actions ========================
+    //======================== dgoods escrow actions ========================
 
-    // ACTION create(name issuer, name category, name token_name, bool fungible, bool
-    //     burnable, bool transferable, int64_t max_supply);
+    //contribute to a project by preordering the selected reward
+    // ACTION preorder(name project_name, name contributor, asset amount, string memo);
 
-    // ACTION issue(name to, name category, name token_name, double quantity, string
-    //     metadata_uri, string memo);
+    //redeems a dgood from a successfully funded project
+    // ACTION redeem(name project_name, name contributor, name reward_name);
 
-    // ACTION pausexfer(bool pause);
-
-    // ACTION burnnft(name owner, vector<uint64_t> tokeninfo_ids);
-
-    // ACTION burn(name owner, uint64_t global_id, double quantity);
-
-    // ACTION transfernft(name from, name to, vector<uint64_t> tokeninfo_ids, string memo);
-
-    // ACTION transfer(name from, name to, uint64_t global_id, double quantity, string memo);
+    //refund a preorder from the project back to the contributor
+    // ACTION refund(name project_name, name contributor, name reward);
 
     //======================== admin actions ========================
 
