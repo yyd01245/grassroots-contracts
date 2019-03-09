@@ -31,6 +31,7 @@ public:
     const symbol CORE_SYM = TLOS_SYM; //TODO: get_core_sym()
 
     const name ADMIN_NAME = name("gograssroots");
+    const name ESCROW_NAME = name("dgoodsescrow");
     const symbol ROOT_SYM = symbol("ROOT", 0);
     const asset PROJECT_FEE = asset(250000, CORE_SYM); //25 TLOS
     const asset RAM_FEE = asset(1000, CORE_SYM); //0.1 TLOS
@@ -51,15 +52,20 @@ public:
         name project_name;
         name category;
         name creator;
+
         string title;
         string description;
         string link;
+
         asset requested;
         asset received;
+
         uint32_t contributors;
         uint32_t donors;
+
         uint32_t begin_time;
         uint32_t end_time;
+
         uint8_t project_status;
         uint32_t last_edit;
 
@@ -97,34 +103,35 @@ public:
 
     //@scope project_name.value
     //@ram
-    // TABLE item {
-    //     name item_name;
-    //     string info;
-    //     string meta;
-    //     uint16_t supply;
+    TABLE preorder {
+        name preorder_name;
+        string info;
+        string meta;
+        uint16_t stock;
 
-    //     uint64_t primary_key() const { return item_name.value; }
-    //     EOSLIB_SERIALIZE(item, (item_name)(info)(meta)(supply))
-    // };
+        uint64_t primary_key() const { return preorder_name.value; }
+        EOSLIB_SERIALIZE(preorder, (preorder_name)(info)(meta)(stock))
+    };
 
     //@scope project_name.value
     //@ram 
-    // TABLE preorder {
-    //     name contributor;
-    //     name item_name;
-    //     uint8_t quantity;
-    //     asset total;
+    TABLE purchase {
+        uint64_t purchase_num;
+        name contributor;
+        name preorder_name;
+        uint8_t quantity;
+        asset total;
 
-    //     uint64_t primary_key() const { return contributor.value; }
-    //     uint64_t by_account() const { return contributor.value; }
-    //     uint128_t by_order() const {
-	// 		uint128_t acc_name = static_cast<uint128_t>(contributor.value);
-    //         uint128_t rwd_name = static_cast<uint128_t>(reward_name.value);
-	// 		return (acc_name << 64) | rwd_name;
-	// 	}
-    //     EOSLIB_SERIALIZE(contribution, (contrib_id)(project_name)
-    //         (contributor)(reward_name)(total))
-    // };
+        uint64_t primary_key() const { return purchase_num; } 
+        uint64_t by_account() const { return contributor.value; }
+        uint128_t by_order() const {
+			uint128_t acc_name = static_cast<uint128_t>(contributor.value);
+            uint128_t ord_name = static_cast<uint128_t>(preorder_name.value);
+			return (acc_name << 64) | ord_name;
+		}
+        EOSLIB_SERIALIZE(purchase, (purchase_num)(contributor)
+            (preorder_name)(quantity)(total))
+    };
 
     typedef multi_index<name("accounts"), account> accounts;
 
@@ -135,13 +142,12 @@ public:
 
     typedef multi_index<name("donations"), donation> donations;
 
-    //items
+    typedef multi_index<name("preorders"), preorder> preorders;
 
-    // typedef multi_index<name("preorders"), preorder,
-    //     indexed_by<name("byproject"), const_mem_fun<contribution, uint64_t, &contribution::by_project>>,
-    //     indexed_by<name("byaccount"), const_mem_fun<contribution, uint64_t, &contribution::by_account>>,
-    //     indexed_by<name("byorder"), const_mem_fun<contribution, uint128_t, &contribution::by_order>>
-    // > preorders;
+    typedef multi_index<name("purchases"), purchase,
+        indexed_by<name("byaccount"), const_mem_fun<purchase, uint64_t, &purchase::by_account>>,
+        indexed_by<name("byorder"), const_mem_fun<purchase, uint128_t, &purchase::by_order>>
+    > purchases;
 
     //======================== project actions ========================
 
@@ -149,12 +155,12 @@ public:
     ACTION newproject(name project_name, name category, name creator, 
         string title, string description, asset requested);
 
-    //add a reward package to a project
-    // ACTION addreward(name project_name, name creator, name reward_name, asset price,
+    //add a preorder package to a project
+    // ACTION addpreorder(name project_name, name creator, name preorder_name, asset price,
     //      string info, string meta, int32_t stock);
 
-    //remove a reward package from a project
-    // ACTION rmvreward(name project_name, name creator, name reward_name);
+    //remove a preorder package from a project
+    // ACTION rmvpreorder(name project_name, name creator, name reward_name);
 
     //TODO: make optional params
     //edit the content of the project
@@ -196,10 +202,10 @@ public:
     //======================== dgoods escrow actions ========================
 
     //contribute to a project by preordering the selected reward
-    // ACTION preorder(name project_name, name contributor, asset amount, string memo);
+    ACTION preorder(name project_name, name contributor, name preorder_name, string memo);
 
     //redeems a dgood from a successfully funded project
-    // ACTION redeem(name project_name, name contributor, name reward_name);
+    ACTION redeem(name project_name, name contributor, name preorder_name);
 
     //refund a preorder from the project back to the contributor
     // ACTION refund(name project_name, name contributor, name reward);

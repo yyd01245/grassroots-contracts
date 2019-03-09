@@ -38,20 +38,20 @@ public:
     };
 
     // scope is category, then token_name is unique
-    TABLE tokenstats {
-        bool fungible; 
-        bool burnable; 
-        bool transferable; 
-        name issuer;
-        name token_name;
-        uint64_t global_id; //TODO: change to symbol type ?
-        uint64_t max_supply;
-        double current_supply;
+    // TABLE tokenstats {
+    //     bool fungible; 
+    //     bool burnable; 
+    //     bool transferable; 
+    //     name issuer;
+    //     name token_name;
+    //     uint64_t global_id; //TODO: change to symbol type ?
+    //     uint64_t max_supply;
+    //     double current_supply;
 
-        uint64_t primary_key() const { return token_name.value; }
-        EOSLIB_SERIALIZE(tokenstats, (fungible)(burnable)(transferable)
-            (issuer)(token_name)(global_id)(max_supply)(current_supply))
-    };
+    //     uint64_t primary_key() const { return token_name.value; }
+    //     EOSLIB_SERIALIZE(tokenstats, (fungible)(burnable)(transferable)
+    //         (issuer)(token_name)(global_id)(max_supply)(current_supply))
+    // };
 
     // typedef multi_index<name("accounts"), account> accounts;
 
@@ -59,7 +59,7 @@ public:
 
     // typedef multi_index<name("tokeninfo"), tokeninfo> tokeninfo;
 
-    typedef multi_index<name("tokenstats"), tokenstats> tokenstats;
+    // typedef multi_index<name("tokenstats"), tokenstats> tokenstats;
 
     typedef singleton<name("symbolinfo"), symbolinfo> symbolinfo;
 	symbolinfo _symbolinfo;

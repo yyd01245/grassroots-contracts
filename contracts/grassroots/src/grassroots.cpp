@@ -261,18 +261,6 @@ void grassroots::donate(name project_name, name donor, asset amount, string memo
     });
 }
 
-// void grassroots::preorder(name project_name, name contributor, asset amount, string memo) {
-    //TODO: implement
-// }
-
-// void grassroots::refund(name project_name, name contributor, name tier_name) {
-    //TODO: implement
-// }
-
-// void grassroots::redeem(name project_name, name contributor, name reward_name) {
-    //TODO: implement
-// }
-
 void grassroots::withdraw(name account_name, asset amount) {
     //authenticate
     require_auth(account_name);
@@ -329,6 +317,53 @@ void grassroots::deleteacct(name account_name) {
 	// )).send();
 }
 
+//======================== dgoods escrow actions ========================
+
+void grassroots::preorder(name project_name, name contributor, name preorder_name, string memo) {
+    //get account
+
+    //get project
+
+    //authenticate
+
+    //validate
+
+    //charge account preorder price
+
+    //emplace preorder purchase
+
+}
+
+void grassroots::redeem(name project_name, name contributor, name preorder_name) {
+    //get account
+    accounts accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(contributor.value, "account not registered");
+
+    //get project
+    projects projects(get_self(), get_self().value);
+    auto& proj = projects.get(project_name.value, "project not found");
+
+    //get purchase
+
+
+    //authenticate
+    require_auth(contributor);
+
+    //validate
+
+
+    //notify dgoodsescrow contract of successful preorder redemption
+    require_recipient(ESCROW_NAME);
+}
+
+// void grassroots::refund(name project_name, name contributor, name tier_name) {
+    //TODO: implement
+// }
+
+//======================== admin actions ========================
+
+
+
 //========== functions ==========
 
 //TODO: make this function more elegant
@@ -372,6 +407,8 @@ void grassroots::catch_transfer(name from, asset amount, string memo) {
         });
     }
 }
+
+//========== dispatcher ==========
 
 extern "C"
 {
