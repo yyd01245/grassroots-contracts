@@ -1,20 +1,21 @@
+#! /bin/bash
 
-if [ "$1" = "grassroots"]
+if [[ "$1" == "grassroots" ]]; then
     contract=grassroots
-    account=grassrootsio
+    account=grassroots
+elif [[ "$1" == "preorderitem" ]]; then
+    contract=preorderitem
+    account=preorderitem
 else
     echo "need contract"
     exit 0
 fi
 
-if [ "$2" = "production" ]
-then
+if [[ "$2" == "production" ]]; then
     url=http://api.tlos.goodblock.io
-elif [ "$2" = "test" ]
-then
+elif [[ "$2" == "test" ]]; then
     url=https://api-test.tlos.goodblock.io/
-elif [ "$2" = "local" ]
-then
+elif [[ "$2" == "local" ]]; then
     url=http://127.0.0.1:8888
 else
     echo "need stage"
@@ -22,5 +23,4 @@ else
 fi
 
 #eos v1.7.0
-cleos -u $url set contract $account ./ $contract.wasm $contract.abi -p $account
-#testing: cleos -u https://api-test.tlos.goodblock.io/ set contract grassrootsio ./ grassroots.wasm grassroots.abi -p grassrootsio
+cleos -u $url set contract $account ./build/$contract/ $contract.wasm $contract.abi -p $account
