@@ -31,17 +31,22 @@ public:
     const symbol CORE_SYM = TLOS_SYM; //TODO: get_core_sym()
 
     const name ADMIN_NAME = name("gograssroots");
-    const name ESCROW_NAME = name("dgoodsescrow");
-    const symbol ROOT_SYM = symbol("ROOT", 0);
+    // const name ESCROW_NAME = name("dgoodsescrow");
+    const symbol ROOTS_SYM = symbol("ROOTS", 0);
     const asset PROJECT_FEE = asset(250000, CORE_SYM); //25 TLOS
     const asset RAM_FEE = asset(1000, CORE_SYM); //0.1 TLOS
 
     enum PROJECT_STATUS : uint8_t {
         SETUP, //0
-        OPEN, //1
+        FUNDING, //1
         FUNDED, //2
         FAILED, //3
         CANCELLED //4
+    };
+
+    enum ACCOUNT_STATUS : uint8_t {
+        GOOD_STANDING, //0
+        SUSPENDED //1
     };
 
     //======================== tables ========================
@@ -60,36 +65,42 @@ public:
         asset requested;
         asset received;
 
-        uint32_t contributors;
-        uint32_t donors;
+        //TODO: stretch_goals ?
+
+        uint32_t donations;
+        uint32_t preorders;
 
         uint32_t begin_time;
         uint32_t end_time;
-
         uint8_t project_status;
-        uint32_t last_edit;
 
         uint64_t primary_key() const { return project_name.value; }
         uint64_t by_cat() const { return category.value; }
         uint64_t by_end_time() const { return static_cast<uint64_t>(end_time); }
         //TODO: make by_creator() index?
         EOSLIB_SERIALIZE(project, (project_name)(category)(creator)
-            (title)(description)(link)(requested)(received)(contributors)(donors)
-            (begin_time)(end_time)(project_status)(last_edit))
+            (title)(description)(link)(requested)(received)(donations)(preorders)
+            (begin_time)(end_time)(project_status))
     };
 
-    //TODO: creator stats? creator table?
+    typedef multi_index<name("projects"), project,
+        indexed_by<name("bycategory"), const_mem_fun<project, uint64_t, &project::by_cat>>,
+        indexed_by<name("byendtime"), const_mem_fun<project, uint64_t, &project::by_end_time>>
+    > projects_table;
 
     //@scope get_self().value
     //@ram 
-    TABLE account { //rename to profile?
+    TABLE account {
         name account_name;
         asset balance;
-        asset dividends;
+        asset rewards;
+        uint8_t account_status;
 
         uint64_t primary_key() const { return account_name.value; }
-        EOSLIB_SERIALIZE(account, (account_name)(balance)(dividends))
+        EOSLIB_SERIALIZE(account, (account_name)(balance)(rewards)(account_status))
     };
+
+    typedef multi_index<name("accounts"), account> accounts_table;
 
     //@scope project_name.value
     //@ram 
@@ -101,53 +112,20 @@ public:
         EOSLIB_SERIALIZE(donation, (donor)(total))
     };
 
-    //@scope project_name.value
+    typedef multi_index<name("donations"), donation> donations_table;
+
+    //@scope get_self().value
     //@ram
-    TABLE preorder {
-        name preorder_name;
-        string info;
-        string meta;
-        uint16_t stock;
+    TABLE category {
+        name category_name;
 
-        uint64_t primary_key() const { return preorder_name.value; }
-        EOSLIB_SERIALIZE(preorder, (preorder_name)(info)(meta)(stock))
+        //TODO: project counts by category?
+
+        uint64_t primary_key() const { return category_name.value; }
+        EOSLIB_SERIALIZE(category, (category_name))
     };
 
-    //@scope project_name.value
-    //@ram 
-    TABLE purchase {
-        uint64_t purchase_num;
-        name contributor;
-        name preorder_name;
-        uint8_t quantity;
-        asset total;
-
-        uint64_t primary_key() const { return purchase_num; } 
-        uint64_t by_account() const { return contributor.value; }
-        uint128_t by_order() const {
-			uint128_t acc_name = static_cast<uint128_t>(contributor.value);
-            uint128_t ord_name = static_cast<uint128_t>(preorder_name.value);
-			return (acc_name << 64) | ord_name;
-		}
-        EOSLIB_SERIALIZE(purchase, (purchase_num)(contributor)
-            (preorder_name)(quantity)(total))
-    };
-
-    typedef multi_index<name("accounts"), account> accounts;
-
-    typedef multi_index<name("projects"), project,
-        indexed_by<name("bycategory"), const_mem_fun<project, uint64_t, &project::by_cat>>,
-        indexed_by<name("byendtime"), const_mem_fun<project, uint64_t, &project::by_end_time>>
-    > projects;
-
-    typedef multi_index<name("donations"), donation> donations;
-
-    typedef multi_index<name("preorders"), preorder> preorders;
-
-    typedef multi_index<name("purchases"), purchase,
-        indexed_by<name("byaccount"), const_mem_fun<purchase, uint64_t, &purchase::by_account>>,
-        indexed_by<name("byorder"), const_mem_fun<purchase, uint128_t, &purchase::by_order>>
-    > purchases;
+    typedef multi_index<name("categories"), category> categories_table;
 
     //======================== project actions ========================
 
@@ -155,23 +133,13 @@ public:
     ACTION newproject(name project_name, name category, name creator, 
         string title, string description, asset requested);
 
-    //add a preorder package to a project
-    // ACTION addpreorder(name project_name, name creator, name preorder_name, asset price,
-    //      string info, string meta, int32_t stock);
-
-    //remove a preorder package from a project
-    // ACTION rmvpreorder(name project_name, name creator, name reward_name);
-
     //TODO: make optional params
-    //edit the content of the project
-    // ACTION editproject(name project_name, name creator,
-    //     string new_title, string new_desc, string new_link, asset new_requested);
+    //update the content of the project
+    ACTION updateproj(name project_name, name creator,
+        string new_title, string new_desc, string new_link, asset new_requested);
 
     //opens the project up for funding for the specified number of days
     ACTION openfunding(name project_name, name creator, uint8_t length_in_days);
-
-    //closes the project after the end time and renders a final project status
-    // ACTION closefunding(name project_name, name creator);
 
     //marks a project as cancelled and releases all funds received, if any
     ACTION cancelproj(name project_name, name creator);
@@ -182,7 +150,7 @@ public:
 
    //======================== account actions ========================
 
-    //registers an account in Grassroots
+    //registers a new account in Grassroots
     ACTION registeracct(name account_name);
 
     //donates a specific amount to a project without a reward
@@ -190,45 +158,44 @@ public:
     ACTION donate(name project_name, name donor, asset amount, string memo);
 
     //reclaims an entire donation from a project
-    // ACTION reclaim(name project_name, name donor);
+    ACTION undonate(name project_name, name donor, string memo);
 
     //withdraws unspent grassroots balance back to eosio.token account
     ACTION withdraw(name account_name, asset amount);
 
     //deletes an account from the Grassroots platform
-    //returns ram and balance bacck to user, forfeits dividends
+    //returns ram and balance back to user, forfeits rewards
     ACTION deleteacct(name account_name);
 
-    //======================== dgoods escrow actions ========================
+    //======================== order actions ========================
 
-    //contribute to a project by preordering the selected reward
-    ACTION preorder(name project_name, name contributor, name preorder_name, string memo);
-
-    //redeems a dgood from a successfully funded project
-    ACTION redeem(name project_name, name contributor, name preorder_name);
-
-    //refund a preorder from the project back to the contributor
-    // ACTION refund(name project_name, name contributor, name reward);
+    
 
     //======================== admin actions ========================
 
     //suspends an account from the platform
-    // ACTION suspendacct(name account_to_suspend);
+    ACTION suspendacct(name account_to_suspend, string memo);
+
+    //restores an account to good standing
+    ACTION restoreacct(name account_to_restore, string memo);
 
     //adds a new category to the platform
-    // ACTION addcategory(name new_category);
+    ACTION addcategory(name new_category);
 
     //removes a category from the platform
-    // ACTION rmvcategory(name category);
+    ACTION rmvcategory(name category);
 
     //========== functions ==========
 
     //returns true if parameter name is a valid category
     bool is_valid_category(name category);
 
+    //returns true if an account is SUSPENDED
+    bool is_in_good_standing(name account_name);
+
     //========== reactions ==========
 
     //catches transfers sent to @gograssroots
-    void catch_transfer(name from, asset amount, string memo);
+    void catch_transfer(name from, name to, asset quantity, string memo);
 
 };
