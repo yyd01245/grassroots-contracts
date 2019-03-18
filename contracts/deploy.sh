@@ -3,9 +3,9 @@
 if [[ "$1" == "grassroots" ]]; then
     contract=grassroots
     account=grassroots
-elif [[ "$1" == "preorderitem" ]]; then
-    contract=preorderitem
-    account=preorderitem
+elif [[ "$1" == "dgoodsescrow" ]]; then
+    contract=dgoodsescrow
+    account=dgoodsescrow
 else
     echo "need contract"
     exit 0
