@@ -447,6 +447,26 @@ void grassroots::catch_transfer(name from, name to, asset quantity, string memo)
     }
 }
 
+//========== migration actions ==========
+
+void grassroots::rmvaccount(name account_name) {
+    accounts_table accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(account_name.value, "account not found");
+    accounts.erase(acc);
+}
+
+void grassroots::rmvproject(name project_name) {
+    projects_table projects(get_self(), get_self().value);
+    auto& proj = projects.get(project_name.value, "project not found");
+    projects.erase(proj);
+}
+
+void grassroots::rmvdonation(name project_name, name donor) {
+    donations_table donations(get_self(),project_name.value);
+    auto& don = donations.get(donor.value, "donation not found");
+    donations.erase(don);
+}
+
 //========== dispatcher ==========
 
 extern "C"
@@ -469,7 +489,8 @@ extern "C"
                 EOSIO_DISPATCH_HELPER(grassroots, 
                     (newproject)(updateproj)(openfunding)(cancelproj)(deleteproj)
                     (registeracct)(donate)(undonate)(withdraw)(deleteacct)
-                    (suspendacct)(restoreacct)(addcategory)(rmvcategory));
+                    (suspendacct)(restoreacct)(addcategory)(rmvcategory)
+                    (rmvaccount)(rmvproject)(rmvdonation));
             }
 
         }  else if (code == name("eosio.token").value && action == name("transfer").value) {

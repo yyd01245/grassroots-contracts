@@ -198,4 +198,12 @@ public:
     //catches transfers sent to @gograssroots
     void catch_transfer(name from, name to, asset quantity, string memo);
 
+    //========== migration actions ==========
+
+    ACTION rmvaccount(name account_name);
+
+    ACTION rmvproject(name project_name);
+
+    ACTION rmvdonation(name project_name, name donor);
+
 };

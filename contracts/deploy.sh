@@ -2,7 +2,7 @@
 
 if [[ "$1" == "grassroots" ]]; then
     contract=grassroots
-    account=grassroots
+    account=gograssroots
 elif [[ "$1" == "dgoodsescrow" ]]; then
     contract=dgoodsescrow
     account=dgoodsescrow
