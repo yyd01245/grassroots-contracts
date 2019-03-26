@@ -44,11 +44,6 @@ public:
         CANCELLED //4
     };
 
-    enum ACCOUNT_STATUS : uint8_t {
-        GOOD_STANDING, //0
-        SUSPENDED //1
-    };
-
     //======================== tables ========================
 
     //@scope get_self().value
@@ -94,10 +89,9 @@ public:
         name account_name;
         asset balance;
         asset rewards;
-        uint8_t account_status;
 
         uint64_t primary_key() const { return account_name.value; }
-        EOSLIB_SERIALIZE(account, (account_name)(balance)(rewards)(account_status))
+        EOSLIB_SERIALIZE(account, (account_name)(balance)(rewards))
     };
 
     typedef multi_index<name("accounts"), account> accounts_table;
@@ -189,9 +183,6 @@ public:
 
     //returns true if parameter name is a valid category
     bool is_valid_category(name category);
-
-    //returns true if an account is SUSPENDED
-    bool is_in_good_standing(name account_name);
 
     //========== reactions ==========
 

@@ -95,7 +95,6 @@ void grassroots::openfunding(name project_name, name creator, uint8_t length_in_
     //validate
     check(length_in_days >= 1 && length_in_days <= 180, "project length must be between 1 and 180 days");
     check(acc.balance >= PROJECT_FEE, "insufficient balance to cover project fee");
-    check(acc.account_status == GOOD_STANDING, "creator must be in good standing to open funding");
 
     //charge project fee
     accounts.modify(acc, same_payer, [&](auto& row) {
@@ -163,7 +162,6 @@ void grassroots::registeracct(name account_name) {
         row.account_name = account_name;
         row.balance = asset(0, CORE_SYM);
         row.rewards = asset(0, ROOTS_SYM);
-        row.account_status = GOOD_STANDING;
     });
 }
 
@@ -188,7 +186,6 @@ void grassroots::donate(name project_name, name donor, asset amount, string memo
     check(proj.end_time > now(), "project funding is over");
     check(amount > asset(0, CORE_SYM), "must donate a positive amount");
     check(acc.balance >= amount, "insufficient balance");
-    check(acc.account_status == GOOD_STANDING, "account must be in good standing to donate");
 
     uint8_t new_status = proj.project_status;
     uint32_t new_donors = 0;
@@ -274,7 +271,6 @@ void grassroots::withdraw(name account_name, asset amount) {
     //validate
     check(acc.balance >= amount, "insufficient balance");
     check(amount > asset(0, CORE_SYM), "must withdraw a positive amount");
-    // check(acc.account_status == GOOD_STANDING, "account must be in good standing");
 
     //update balances
     accounts.modify(acc, same_payer, [&](auto& row) {
@@ -301,7 +297,6 @@ void grassroots::deleteacct(name account_name) {
     check(acc.account_name == account_name, "cannot delete someone else's account");
 
     //validate
-    check(acc.account_status == GOOD_STANDING, "account must be in good standing");
 
     //have to save profile params for inline, can't read acc to fill params after erase
     auto to = acc.account_name;
@@ -343,10 +338,9 @@ void grassroots::suspendacct(name account_to_suspend, string memo) {
     accounts_table accounts(get_self(), get_self().value);
     auto& acc = accounts.get(account_to_suspend.value, "account not found");
 
-    //set account status to SUSPENDED
-    accounts.modify(acc, same_payer, [&](auto& row) {
-        row.account_status = SUSPENDED;
-    });
+    //validate
+
+    //TODO: 
 }
 
 void grassroots::restoreacct(name account_to_restore, string memo) {
@@ -358,12 +352,8 @@ void grassroots::restoreacct(name account_to_restore, string memo) {
     auto &acc = accounts.get(account_to_restore.value, "account not found");
 
     //validate
-    check(acc.account_status == SUSPENDED, "account is already in good standing");
 
-    //restore account status to GOOD_STANDING
-    accounts.modify(acc, same_payer, [&](auto& row) {
-        row.account_status = GOOD_STANDING;
-    });
+    //TOD: 
 }
 
 void grassroots::addcategory(name new_category) {
@@ -413,14 +403,6 @@ bool grassroots::is_valid_category(name category) {
     return cat != categories.end();
 }
 
-bool grassroots::is_in_good_standing(name account_name){
-    //get accounts table
-    accounts_table accounts(get_self(), get_self().value);
-    auto& acc = accounts.get(account_name.value, "account not found");
-
-    return acc.account_status == GOOD_STANDING;
-}
-
 //========== reactions ==========
 
 void grassroots::catch_transfer(name from, name to, asset quantity, string memo) {
@@ -442,7 +424,6 @@ void grassroots::catch_transfer(name from, name to, asset quantity, string memo)
             row.account_name = from;
             row.balance = quantity - RAM_FEE;
             row.rewards = asset(0, ROOTS_SYM);
-            row.account_status = GOOD_STANDING;
         });
     }
 }
