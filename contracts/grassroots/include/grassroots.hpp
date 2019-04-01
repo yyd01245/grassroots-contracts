@@ -67,7 +67,7 @@ public:
 
         uint32_t begin_time;
         uint32_t end_time;
-        uint8_t project_status;
+        uint8_t status;
 
         uint64_t primary_key() const { return project_name.value; }
         uint64_t by_cat() const { return category.value; }
@@ -75,7 +75,7 @@ public:
         //TODO: make by_creator() index?
         EOSLIB_SERIALIZE(project, (project_name)(category)(creator)
             (title)(description)(link)(requested)(received)(donations)(preorders)
-            (begin_time)(end_time)(project_status))
+            (begin_time)(end_time)(status))
     };
 
     typedef multi_index<name("projects"), project,
@@ -96,17 +96,24 @@ public:
 
     typedef multi_index<name("accounts"), account> accounts_table;
 
-    //@scope project_name.value
+    //@scope get_self().value
     //@ram 
     TABLE donation {
+        uint64_t donation_id;
         name donor;
+        name project_name;
         asset total;
 
-        uint64_t primary_key() const { return donor.value; }
-        EOSLIB_SERIALIZE(donation, (donor)(total))
+        uint64_t primary_key() const { return donation_id; }
+        uint64_t by_donor() const { return donor.value; }
+        uint64_t by_project() const { return project_name.value; }
+        EOSLIB_SERIALIZE(donation, (donation_id)(donor)(project_name)(total))
     };
 
-    typedef multi_index<name("donations"), donation> donations_table;
+    typedef multi_index<name("donations"), donation,
+        indexed_by<name("bydonor"), const_mem_fun<donation, uint64_t, &donation::by_donor>>,
+        indexed_by<name("byproject"), const_mem_fun<donation, uint64_t, &donation::by_project>>
+    > donations_table;
 
     //@scope get_self().value
     //@ram
@@ -195,6 +202,6 @@ public:
 
     ACTION rmvproject(name project_name);
 
-    ACTION rmvdonation(name project_name, name donor);
+    ACTION rmvdonation(uint64_t donation_id);
 
 };

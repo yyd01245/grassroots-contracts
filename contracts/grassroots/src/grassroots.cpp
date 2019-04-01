@@ -49,7 +49,7 @@ void grassroots::newproject(name project_name, name category, name creator,
         row.preorders = 0;
         row.begin_time = 0;
         row.end_time = 0;
-        row.project_status = SETUP;
+        row.status = SETUP;
     });
 }
 
@@ -105,7 +105,7 @@ void grassroots::openfunding(name project_name, name creator, uint8_t length_in_
     projects.modify(proj, same_payer, [&](auto& row) {
         row.begin_time = now();
         row.end_time = now() + uint32_t(length_in_days * 86400);
-        row.project_status = FUNDING;
+        row.status = FUNDING;
     });
 }
 
@@ -120,11 +120,11 @@ void grassroots::cancelproj(name project_name, name creator) {
 
     //validate
     check(proj.end_time > now(), "cannot cancel after project's end time");
-    check(proj.project_status == FUNDING, "cannot cancel a project after it's been funded");
+    check(proj.status == FUNDING, "cannot cancel a project after it's been funded");
 
     //update project status to cancelled
     projects.modify(proj, same_payer, [&](auto& row) {
-        row.project_status = CANCELLED;
+        row.status = CANCELLED;
     });
 }
 
@@ -138,7 +138,7 @@ void grassroots::deleteproj(name project_name, name creator) {
     check(creator == proj.creator, "only project creator can delete the project");
 
     //validate
-    check(proj.project_status == SETUP, "can only delete projects in SETUP");
+    check(proj.status == SETUP, "can only delete projects in SETUP");
 
     //delete project
     projects.erase(proj);
@@ -175,8 +175,9 @@ void grassroots::donate(name project_name, name donor, asset amount, string memo
     auto& acc = accounts.get(donor.value, "account not registered");
 
     //find donation
-    donations_table donations(get_self(), project_name.value);
-    auto don = donations.find(donor.value);
+    donations_table donations(get_self(), get_self().value);
+    auto by_donor = donations.get_index<name("bydonor")>();
+    auto don = by_donor.find(project_name.value);
 
     //authenticate
     require_auth(donor);
@@ -187,27 +188,29 @@ void grassroots::donate(name project_name, name donor, asset amount, string memo
     check(amount > asset(0, CORE_SYM), "must donate a positive amount");
     check(acc.balance >= amount, "insufficient balance");
 
-    uint8_t new_status = proj.project_status;
+    uint8_t new_status = proj.status;
     uint32_t new_donors = 0;
 
     //update donations
-    if (don == donations.end()) { //donation not found for project
+    if (don == by_donor.end()) { //donation not found for project
         //increment project donors
         new_donors = 1;
 
         //emplace new donation
         donations.emplace(donor, [&](auto& row) {
+            row.donation_id = donations.available_primary_key();
             row.donor = donor;
+            row.project_name = project_name;
             row.total = amount;
         });
     } else { //previous donation to project exists
         //update donation total
-        donations.modify(don, same_payer, [&](auto& row) {
+        by_donor.modify(don, same_payer, [&](auto& row) {
             row.total += amount;
         });
     }
 
-    //update status if project is now funded
+    //update project status if now fully funded
     if (proj.received + amount >= proj.requested) {
         new_status = FUNDED;
     }
@@ -221,7 +224,7 @@ void grassroots::donate(name project_name, name donor, asset amount, string memo
     projects.modify(proj, same_payer, [&](auto& row) {
         row.received += amount;
         row.donations += new_donors;
-        row.project_status = new_status;
+        row.status = new_status;
     });
 }
 
@@ -235,15 +238,16 @@ void grassroots::undonate(name project_name, name donor, string memo) {
     auto& acc = accounts.get(donor.value, "account not registered");
 
     //find donation
-    donations_table donations(get_self(), project_name.value);
-    auto& don = donations.get(donor.value, "donation not found");
+    donations_table donations(get_self(), get_self().value);
+    auto by_donor = donations.get_index<name("bydonor")>();
+    auto& don = by_donor.get(project_name.value, "donation not found");
 
     //authenticate
     require_auth(donor);
     check(acc.account_name == donor, "cannot undonate another account's donation");
 
     //validate
-    check(proj.project_status == FUNDING, "project has already been funded");
+    check(proj.status == FUNDING, "project has already been funded");
 
     //remove donation from project
     projects.modify(proj, same_payer, [&](auto& row) {
@@ -442,9 +446,9 @@ void grassroots::rmvproject(name project_name) {
     projects.erase(proj);
 }
 
-void grassroots::rmvdonation(name project_name, name donor) {
-    donations_table donations(get_self(),project_name.value);
-    auto& don = donations.get(donor.value, "donation not found");
+void grassroots::rmvdonation(uint64_t donation_id) {
+    donations_table donations(get_self(), get_self().value);
+    auto& don = donations.get(donation_id, "donation not found");
     donations.erase(don);
 }
 
