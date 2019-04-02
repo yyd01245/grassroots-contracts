@@ -132,11 +132,12 @@ public:
     //@scope get_self().value
     //@ram 
     TABLE featured {
+        uint64_t featured_id;
         name project_name;
         uint32_t featured_until;
 
-        uint64_t primary_key() const { return project_name.value; }
-        EOSLIB_SERIALIZE(featured, (project_name)(featured_until))
+        uint64_t primary_key() const { return featured_id; }
+        EOSLIB_SERIALIZE(featured, (featured_id)(project_name)(featured_until))
     };
 
     typedef multi_index<name("featured"), featured> featured_table;

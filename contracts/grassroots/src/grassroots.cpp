@@ -353,6 +353,7 @@ void grassroots::redeemroots(name account_name, name package_name, name project_
 
         if (feat == featured.end()) { //not on featured list
             featured.emplace(account_name, [&](auto& row) {
+                row.featured_id = featured.available_primary_key();
                 row.project_name = project_name;
                 row.featured_until = now() + uint32_t(DAY_IN_SECS * 3);
             });
