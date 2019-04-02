@@ -4,21 +4,21 @@ Grassroots is a crowdfunding development platform for EOSIO software. It allows 
 
 ## Register Your Account
 
-To begin using the Grassroots platform users must simply call the `grassroots::registeracct` action.
+To begin using the Grassroots platform users simply call the `grassroots::registeracct` action.
 
 * registeracct(name account_name)`
 
-    `new_account_name` is the name of the account to be registered in Grassroots. Currently users must enter their own account names into this field.
+    `account_name` is the name of the account to be registered in Grassroots. Currently users must enter their own account names into this field.
 
-Additionally, users can create an account by simply making a regular `eosio.token::transfer` to the `@gograssroots` account with a memo of "register account". This will create a balance entry with RAM paid for by Grassroots, but will charge an account creation fee of `0.1 TLOS` before placing the remainder of the transfer into the newly created account.
+Alternatively, users can create an account by simply making a regular `eosio.token::transfer` to the `@gograssroots` account with a memo of "register account" (without the quotes). This will create a balance entry with RAM paid for by Grassroots, but will charge an account creation fee of `0.1 TLOS` before placing the remainder of the transfer into the newly created account. This is a really easy way to register for a Grassroots account if using a wallet that is limited to transfer functionality.
 
-After creating a Grassroots account, all future `eosio.token::transfers` to `@gograssroots` will be caught by the contract and placed in the sender's Grassroots account.
+After creating a Grassroots account, all future `eosio.token::transfers` to `@gograssroots` will be caught by the contract and placed in the sender's Grassroots account free of charge.
 
 A user's Grassroots account is their operating balance for all actions on the platform. This means all contributions, donations, and fees are pulled from this account. If at any time a user experiences an `insufficient balance` error, they can simply transfer more `TLOS` to `@gograssroots` to debit their account.
 
 ## Creating A Project
 
-Project creation in Grassroots is simple, just follow this track:
+Project creation in Grassroots is easy, just follow this track:
 
 ### Project Setup
 
@@ -40,37 +40,17 @@ When setting string variables, please use markdown format. Grassroots React comp
 
     `requested` is the amount of `TLOS` requested to fund the project.
 
-Available categories: `games, apps, research, tools, environment, audio, video, publishing`
+Available categories: `apps, audio, environment, expansion, games, marketing, publishing, research, technology, video`
 
-### Add Tiers
+### Adding Preorders
 
-After creating the new project, the project creator can now add tiers for contributors to purchase. Each tier can be seen as a package when bundled with reward(s) outlined in the project description.
+**`In Development...`**
 
-Note that if a project is readied without any tiers, it cannot receive contributions and can only receive direct donations through the `grassroots::donate` action.
+### Editing Project Details
 
-* `addtier`(name project_name, name creator, name tier_name, asset price, string description, uint16_t contributions)
+To edit a project's details, simply call the `grassroots::updateproj` action. If any edits need to be made they must be done before opening the project for funding. Once a project has begun funding it can no longer be edited by the project creator until the campaign is over.
 
-    `project_name` is the name of the project to add the tier.
-
-    `creator` is the name of the project creator. Only this account is authorized to add tiers.
-
-    `tier_name` is the name of the new tier. It must be unique to other tiers in the project.
-
-    `price` is the contribution price of the tier.
-
-    `description` is a description of the tier and the reward(s) it offers.
-
-    `contributions` is the total number of contributions accepted at this tier. Each contribution to this tier will decrement the remaining contributions.
-
-* `removetier()`
-
-    **In Development...**
-
-### Make the Final Touches
-
-If any edits need to be made they must be done before readying the project. Once a project is readied it can no longer be edited by the project creator until the contribution/donation period is over. To edit the project, simply call the `grassroots::editproject` action.
-
-* `editproject`(name project_name, name creator, string new_title, string new_desc, string new_link, asset new_requested)
+* `updateproj`(name project_name, name creator, string new_title, string new_desc, string new_link, asset new_requested)
 
     `project_name` is the name of the project to edit.
 
@@ -86,9 +66,9 @@ If any edits need to be made they must be done before readying the project. Once
 
 To leave a field unchanged, type "none" in its field. **In Development...**
 
-### Ready the Project
+### Begin Funding Campaign
 
-After project setup is complete, the final step is to ready the project by calling the `grassroots::openfunding` action.
+After project setup is complete, the final step is to open the project for funding by calling the `grassroots::openfunding` action.
 
 * `openfunding(name project_name, name creator, uint8_t length_in_days)`
 
@@ -98,19 +78,21 @@ After project setup is complete, the final step is to ready the project by calli
 
     `length_in_days` is the number of days funding will be open, from the moment the `openfunding()` action is called.
 
-Note that there is a `25 TLOS` fee for opening funding on a project.
+Note that there is a flat `25 TLOS` fee for opening funding on a project.
 
 ### Wait for Contributions/Donations
 
-Blah blah blah
+`Still Writing...`
 
 ### Deleting A Project
 
-Blah blah blah
+`Still Writing...`
 
 ### Cancelling A Project
 
-Blah blah blah
+`Still Writing...`
+
+
 
 ## Contributing to Projects
 
@@ -124,21 +106,21 @@ All: `cleos get table gograssroots gograssroots projects`
 
 By Category: `cleos get table gograssroots gograssroots projects --lower category --key-type i64 --index 2`
 
-* `games` : Create the next big blockchain-based game, or maybe just a game of checkers.
+* `games` : 
 
-* `apps` : Fund development and deployment of all variety of apps.
+* `apps` : 
 
-* `research` : Fund a research project to benefit the community.
+* `research` : 
 
-* `technology` : Fund a new piece of tech.
+* `technology` : 
 
-* `environment` : Fund the next green initiative.
+* `environment` : 
 
-* `audio` : Fund music and audio projects.
+* `audio` : 
 
-* `video` : Fund film and video projects.
+* `video` : 
 
-* `publishing` : Publish a book or article.
+* `publishing` : 
 
 ### Make a Donation
 
@@ -163,9 +145,3 @@ To withdraw funds from a Grassroots balance back to a regular `eosio.token` bala
     `account_name` is the name of the Grassroots account to withdraw from. Only the owner of the account can withdraw from it.
 
     `amount` is the quantity of system tokens to withdraw from the Grasroots account.
-
-Blah blah blah
-
-## Grassroots Content Escrow System
-
-Blah blah blah

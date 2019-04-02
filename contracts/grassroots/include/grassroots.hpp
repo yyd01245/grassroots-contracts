@@ -35,6 +35,7 @@ public:
     const symbol ROOTS_SYM = symbol("ROOTS", 0);
     const asset PROJECT_FEE = asset(250000, CORE_SYM); //25 TLOS
     const asset RAM_FEE = asset(1000, CORE_SYM); //0.1 TLOS
+    const uint32_t DAY_IN_SECS = 86400;
 
     enum PROJECT_STATUS : uint8_t {
         SETUP, //0
@@ -128,6 +129,19 @@ public:
 
     typedef multi_index<name("categories"), category> categories_table;
 
+    //@scope get_self().value
+    //@ram 
+    TABLE featured {
+        uint64_t featured_id;
+        name project_name;
+        uint32_t featured_until;
+
+        uint64_t primary_key() const { return featured_id; }
+        EOSLIB_SERIALIZE(featured, (featured_id)(project_name)(featured_until))
+    };
+
+    typedef multi_index<name("featured"), featured> featured_table;
+
     //======================== project actions ========================
 
     //create a new project
@@ -168,6 +182,9 @@ public:
     //returns ram and balance back to user, forfeits rewards
     ACTION deleteacct(name account_name);
 
+    //redeems ROOTS for various rewards packages
+    ACTION redeemroots(name account_name, name package_name, name project_name);
+
     //======================== order actions ========================
 
     
@@ -185,6 +202,9 @@ public:
 
     //removes a category from the platform
     ACTION rmvcategory(name category);
+
+    //emplaces or extends a featured project
+    ACTION editfeatured(name project_name, uint32_t added_seconds);
 
     //========== functions ==========
 

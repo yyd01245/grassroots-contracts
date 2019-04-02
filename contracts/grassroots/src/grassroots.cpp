@@ -328,6 +328,44 @@ void grassroots::deleteacct(name account_name) {
 	)).send();
 }
 
+void grassroots::redeemroots(name account_name, name package_name, name project_name) {
+    //authenticate
+    require_auth(account_name);
+
+    //get accounts table
+    accounts_table accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(account_name.value, "account not found");
+
+    //process package
+    if (package_name == name("addfeatured")) {
+
+        //get featured table
+        featured_table featured(get_self(), get_self().value);
+        auto feat = featured.find(project_name.value);
+
+        //validate
+        check(acc.rewards >= asset(25, ROOTS_SYM), "insufficient rewards");
+
+        //charge account rewards
+        accounts.modify(acc, same_payer, [&](auto& row) {
+            row.rewards -= asset(25, ROOTS_SYM);
+        });
+
+        if (feat == featured.end()) { //not on featured list
+            featured.emplace(account_name, [&](auto& row) {
+                row.featured_id = featured.available_primary_key();
+                row.project_name = project_name;
+                row.featured_until = now() + uint32_t(DAY_IN_SECS * 3);
+            });
+        } else { //project already on featured list
+            featured.modify(feat, same_payer, [&](auto& row) {
+                row.featured_until += uint32_t(DAY_IN_SECS * 3);
+            });
+        }
+
+    }
+}
+
 //======================== order actions ========================
 
 
@@ -473,7 +511,7 @@ extern "C"
             {
                 EOSIO_DISPATCH_HELPER(grassroots, 
                     (newproject)(updateproj)(openfunding)(cancelproj)(deleteproj)
-                    (registeracct)(donate)(undonate)(withdraw)(deleteacct)
+                    (registeracct)(donate)(undonate)(withdraw)(deleteacct)(redeemroots)
                     (suspendacct)(restoreacct)(addcategory)(rmvcategory)
                     (rmvaccount)(rmvproject)(rmvdonation));
             }
