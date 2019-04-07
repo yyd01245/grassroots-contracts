@@ -7,12 +7,11 @@
  */
 
 #pragma once
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/permission.hpp>
-#include <eosiolib/asset.hpp>
-#include <eosiolib/action.hpp>
-#include <eosiolib/transaction.hpp>
-#include <eosiolib/ignore.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/permission.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/action.hpp>
+#include <eosio/ignore.hpp>
 
 using namespace std;
 using namespace eosio;
@@ -132,12 +131,12 @@ public:
     //@scope get_self().value
     //@ram 
     TABLE featured {
-        uint64_t featured_id;
+        // uint64_t featured_id;
         name project_name;
         uint32_t featured_until;
 
-        uint64_t primary_key() const { return featured_id; }
-        EOSLIB_SERIALIZE(featured, (featured_id)(project_name)(featured_until))
+        uint64_t primary_key() const { return project_name.value; }
+        EOSLIB_SERIALIZE(featured, (project_name)(featured_until))
     };
 
     typedef multi_index<name("featured"), featured> featured_table;
@@ -168,13 +167,6 @@ public:
     //registers a new account in Grassroots
     ACTION registeracct(name account_name);
 
-    //donates a specific amount to a project without a reward
-    //is only be returned if the project fails to get funded ???
-    ACTION donate(name project_name, name donor, asset amount, string memo);
-
-    //reclaims an entire donation from a project
-    ACTION undonate(name project_name, name donor, string memo);
-
     //withdraws unspent grassroots balance back to eosio.token account
     ACTION withdraw(name account_name, asset amount);
 
@@ -182,29 +174,32 @@ public:
     //returns ram and balance back to user, forfeits rewards
     ACTION deleteacct(name account_name);
 
-    //redeems ROOTS for various rewards packages
-    ACTION redeemroots(name account_name, name package_name, name project_name);
+    //======================== donation actions ========================
 
-    //======================== order actions ========================
+    //donates a specific amount to a project without a preorder
+    //is returned if the project fails to get funded
+    ACTION donate(name project_name, name donor, asset amount, string memo);
+
+    //reclaims an entire donation from a project
+    ACTION undonate(name project_name, name donor, string memo);
+
+    //======================== preorder actions ========================
 
     
 
     //======================== admin actions ========================
 
     //suspends an account from the platform
-    ACTION suspendacct(name account_to_suspend, string memo);
+    // ACTION suspendacct(name account_to_suspend, string memo);
 
     //restores an account to good standing
-    ACTION restoreacct(name account_to_restore, string memo);
+    // ACTION restoreacct(name account_to_restore, string memo);
 
     //adds a new category to the platform
     ACTION addcategory(name new_category);
 
     //removes a category from the platform
     ACTION rmvcategory(name category);
-
-    //emplaces or extends a featured project
-    ACTION editfeatured(name project_name, uint32_t added_seconds);
 
     //========== functions ==========
 
@@ -223,5 +218,7 @@ public:
     ACTION rmvproject(name project_name);
 
     ACTION rmvdonation(uint64_t donation_id);
+
+    ACTION addfeatured(name project_name, uint32_t added_seconds);
 
 };

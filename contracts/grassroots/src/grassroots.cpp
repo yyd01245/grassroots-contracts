@@ -165,6 +165,72 @@ void grassroots::registeracct(name account_name) {
     });
 }
 
+void grassroots::withdraw(name account_name, asset amount) {
+    //authenticate
+    require_auth(account_name);
+    
+    //get account
+    accounts_table accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(account_name.value, "account not found");
+
+    //validate
+    check(acc.balance >= amount, "insufficient balance");
+    check(amount > asset(0, CORE_SYM), "must withdraw a positive amount");
+
+    //update balances
+    accounts.modify(acc, same_payer, [&](auto& row) {
+        row.balance -= amount;
+    });
+
+    //transfer to eosio.token
+    //inline trx requires gograssroots@active to have gograssroots@eosio.code
+    action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
+		get_self(), //from
+		account_name, //to
+		amount, //quantity
+        std::string("grassroots withdrawal") //memo
+	)).send();
+}
+
+void grassroots::deleteacct(name account_name) {
+    //get account
+    accounts_table accounts(get_self(), get_self().value);
+    auto& acc = accounts.get(account_name.value, "account not registered");
+
+    //authenticate
+    require_auth(account_name);
+    check(acc.account_name == account_name, "cannot delete someone else's account");
+
+    //validate
+
+    //have to save profile params for inline, can't read acc to fill params after erase
+    auto to = acc.account_name;
+    auto quantity = acc.balance;
+
+    //forfeit rewards to @gograssroots
+    accounts_table admin_acc(get_self(), get_self().value);
+    auto& admin = admin_acc.get(ADMIN_NAME.value, "admin account not registered");
+
+    //add deleted accounts rewards to @gograssroots
+    admin_acc.modify(admin, same_payer, [&](auto& row) {
+        row.rewards += acc.rewards;
+    });
+
+    //delete account
+    accounts.erase(acc);
+
+    //transfer remaining balance back to eosio.token
+    //inline trx requires gograssroots@active to have gograssroots@eosio.code
+    action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
+		get_self(), //from
+		to, //to
+		quantity, //quantity
+        std::string("balance from deleted account") //memo
+	)).send();
+}
+
+//======================== donation actions ========================
+
 void grassroots::donate(name project_name, name donor, asset amount, string memo) {
     //get project
     projects_table projects(get_self(), get_self().value);
@@ -264,139 +330,11 @@ void grassroots::undonate(name project_name, name donor, string memo) {
     donations.erase(don);
 }
 
-void grassroots::withdraw(name account_name, asset amount) {
-    //authenticate
-    require_auth(account_name);
-    
-    //get account
-    accounts_table accounts(get_self(), get_self().value);
-    auto& acc = accounts.get(account_name.value, "account not found");
-
-    //validate
-    check(acc.balance >= amount, "insufficient balance");
-    check(amount > asset(0, CORE_SYM), "must withdraw a positive amount");
-
-    //update balances
-    accounts.modify(acc, same_payer, [&](auto& row) {
-        row.balance -= amount;
-    });
-
-    //transfer to eosio.token
-    //inline trx requires gograssroots@active to have gograssroots@eosio.code
-    action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
-		get_self(), //from
-		account_name, //to
-		amount, //quantity
-        std::string("grassroots withdrawal") //memo
-	)).send();
-}
-
-void grassroots::deleteacct(name account_name) {
-    //get account
-    accounts_table accounts(get_self(), get_self().value);
-    auto& acc = accounts.get(account_name.value, "account not registered");
-
-    //authenticate
-    require_auth(account_name);
-    check(acc.account_name == account_name, "cannot delete someone else's account");
-
-    //validate
-
-    //have to save profile params for inline, can't read acc to fill params after erase
-    auto to = acc.account_name;
-    auto quantity = acc.balance;
-
-    //forfeit rewards to @gograssroots
-    accounts_table admin_acc(get_self(), get_self().value);
-    auto& admin = admin_acc.get(ADMIN_NAME.value, "admin account not registered");
-
-    //add deleted accounts rewards to @gograssroots
-    admin_acc.modify(admin, same_payer, [&](auto& row) {
-        row.rewards += acc.rewards;
-    });
-
-    //delete account
-    accounts.erase(acc);
-
-    //transfer remaining balance back to eosio.token
-    //inline trx requires gograssroots@active to have gograssroots@eosio.code
-    action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
-		get_self(), //from
-		to, //to
-		quantity, //quantity
-        std::string("balance from deleted account") //memo
-	)).send();
-}
-
-void grassroots::redeemroots(name account_name, name package_name, name project_name) {
-    //authenticate
-    require_auth(account_name);
-
-    //get accounts table
-    accounts_table accounts(get_self(), get_self().value);
-    auto& acc = accounts.get(account_name.value, "account not found");
-
-    //process package
-    if (package_name == name("addfeatured")) {
-
-        //get featured table
-        featured_table featured(get_self(), get_self().value);
-        auto feat = featured.find(project_name.value);
-
-        //validate
-        check(acc.rewards >= asset(25, ROOTS_SYM), "insufficient rewards");
-
-        //charge account rewards
-        accounts.modify(acc, same_payer, [&](auto& row) {
-            row.rewards -= asset(25, ROOTS_SYM);
-        });
-
-        if (feat == featured.end()) { //not on featured list
-            featured.emplace(account_name, [&](auto& row) {
-                row.featured_id = featured.available_primary_key();
-                row.project_name = project_name;
-                row.featured_until = now() + uint32_t(DAY_IN_SECS * 3);
-            });
-        } else { //project already on featured list
-            featured.modify(feat, same_payer, [&](auto& row) {
-                row.featured_until += uint32_t(DAY_IN_SECS * 3);
-            });
-        }
-
-    }
-}
-
-//======================== order actions ========================
+//======================== preorder actions ========================
 
 
 
 //======================== admin actions ========================
-
-void grassroots::suspendacct(name account_to_suspend, string memo) {
-    //authenticate
-    require_auth(ADMIN_NAME);
-
-    //get accounts table
-    accounts_table accounts(get_self(), get_self().value);
-    auto& acc = accounts.get(account_to_suspend.value, "account not found");
-
-    //validate
-
-    //TODO: 
-}
-
-void grassroots::restoreacct(name account_to_restore, string memo) {
-    //authenticate
-    require_auth(ADMIN_NAME);
-
-    //get accounts table
-    accounts_table accounts(get_self(), get_self().value);
-    auto &acc = accounts.get(account_to_restore.value, "account not found");
-
-    //validate
-
-    //TOD: 
-}
 
 void grassroots::addcategory(name new_category) {
     //authenticate
@@ -490,6 +428,22 @@ void grassroots::rmvdonation(uint64_t donation_id) {
     donations.erase(don);
 }
 
+void grassroots::addfeatured(name project_name, uint32_t added_seconds) {
+    featured_table featured(get_self(), get_self().value);
+    auto f_itr = featured.find(project_name.value);
+
+    if (f_itr == featured.end()) {
+        featured.emplace(get_self(), [&](auto& row) {
+            row.project_name = project_name;
+            row.featured_until = now() + added_seconds;
+        });
+    } else {
+        featured.modify(f_itr, same_payer, [&](auto& row) {
+            row.featured_until = now() + added_seconds;
+        });
+    }
+}
+
 //========== dispatcher ==========
 
 extern "C"
@@ -510,10 +464,11 @@ extern "C"
             switch (action)
             {
                 EOSIO_DISPATCH_HELPER(grassroots, 
-                    (newproject)(updateproj)(openfunding)(cancelproj)(deleteproj)
-                    (registeracct)(donate)(undonate)(withdraw)(deleteacct)(redeemroots)
-                    (suspendacct)(restoreacct)(addcategory)(rmvcategory)
-                    (rmvaccount)(rmvproject)(rmvdonation));
+                    (newproject)(updateproj)(openfunding)(cancelproj)(deleteproj) //project
+                    (registeracct)(withdraw)(deleteacct) //account
+                    (donate)(undonate) //donation
+                    (addcategory)(rmvcategory) //admin
+                    (rmvaccount)(rmvproject)(rmvdonation)(addfeatured)); //migration
             }
 
         }  else if (code == name("eosio.token").value && action == name("transfer").value) {
