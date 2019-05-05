@@ -1,8 +1,8 @@
 /**
- * Grassroots is a crowdfunding development platform for EOSIO software.
+ * Grassroots is a crowdfunding development platform for EOSIO software and projects.
  * 
  * @author Craig Branscom
- * @contract grassroots
+ * @contract Grassroots
  * @copyright defined in LICENSE.txt
  */
 
@@ -16,13 +16,13 @@
 using namespace std;
 using namespace eosio;
 
-class [[eosio::contract("grassroots")]] grassroots : public contract {
+CONTRACT Grassroots : public contract {
 
 public:
 
-    grassroots(name self, name code, datastream<const char*> ds);
+    Grassroots(name self, name code, datastream<const char*> ds);
 
-    ~grassroots();
+    ~Grassroots();
 
     // const symbol EOS_SYM = symbol("EOS", 4);
     // const symbol BOS_SYM = symbol("BOS", 4);
@@ -30,9 +30,8 @@ public:
     const symbol CORE_SYM = TLOS_SYM; //TODO: get_core_sym()
 
     const name ADMIN_NAME = name("gograssroots");
-    // const name ESCROW_NAME = name("dgoodsescrow");
-    const symbol ROOTS_SYM = symbol("ROOTS", 0);
-    const asset PROJECT_FEE = asset(250000, CORE_SYM); //25 TLOS
+    const symbol ROOTS_SYM = symbol("ROOTS", 0); //TODO: rename to DROPS?
+    const asset LISTING_FEE = asset(250000, CORE_SYM); //25 TLOS
     const asset RAM_FEE = asset(1000, CORE_SYM); //0.1 TLOS
     const uint32_t DAY_IN_SECS = 86400;
 
@@ -53,35 +52,22 @@ public:
         name category;
         name creator;
 
-        string title;
-        string description;
-        string link;
-
         asset requested;
         asset received;
-
-        //TODO: stretch_goals ?
-
-        uint32_t donations;
-        uint32_t preorders;
 
         uint32_t begin_time;
         uint32_t end_time;
         uint8_t status;
 
         uint64_t primary_key() const { return project_name.value; }
-        uint64_t by_cat() const { return category.value; }
-        uint64_t by_end_time() const { return static_cast<uint64_t>(end_time); }
         //TODO: make by_creator() index?
-        EOSLIB_SERIALIZE(project, (project_name)(category)(creator)
-            (title)(description)(link)(requested)(received)(donations)(preorders)
+        EOSLIB_SERIALIZE(project, 
+            (project_name)(category)(creator)
+            (requested)(received)
             (begin_time)(end_time)(status))
     };
 
-    typedef multi_index<name("projects"), project,
-        indexed_by<name("bycategory"), const_mem_fun<project, uint64_t, &project::by_cat>>,
-        indexed_by<name("byendtime"), const_mem_fun<project, uint64_t, &project::by_end_time>>
-    > projects_table;
+    typedef multi_index<name("projects"), project> projects_table;
 
     //@scope get_self().value
     //@ram 
