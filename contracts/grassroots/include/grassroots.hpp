@@ -1,5 +1,5 @@
 /**
- * Grassroots is a crowdfunding development platform for EOSIO software and projects.
+ * Grassroots is a crowdfunding and development platform for EOSIO software.
  * 
  * @author Craig Branscom
  * @contract Grassroots
@@ -16,25 +16,34 @@
 using namespace std;
 using namespace eosio;
 
-CONTRACT Grassroots : public contract {
+CONTRACT grassroots : public contract {
+    public:
 
-public:
+    grassroots(name self, name code, datastream<const char*> ds);
 
-    Grassroots(name self, name code, datastream<const char*> ds);
+    ~grassroots();
 
-    ~Grassroots();
+    //admin accounts
+    const name ADMIN_NAME = name("gograssroots");
 
+    //symbols
     // const symbol EOS_SYM = symbol("EOS", 4);
     // const symbol BOS_SYM = symbol("BOS", 4);
     const symbol TLOS_SYM = symbol("TLOS", 4);
     const symbol CORE_SYM = TLOS_SYM; //TODO: get_core_sym()
+    const symbol ROOTS_SYM = symbol("ROOTS", 0); //TODO: rename?
 
-    const name ADMIN_NAME = name("gograssroots");
-    const symbol ROOTS_SYM = symbol("ROOTS", 0); //TODO: rename to DROPS?
+    //fees
     const asset LISTING_FEE = asset(250000, CORE_SYM); //25 TLOS
     const asset RAM_FEE = asset(1000, CORE_SYM); //0.1 TLOS
-    const uint32_t DAY_IN_SECS = 86400;
 
+    //thresholds
+    const asset MIN_PROJECT_REQUESTED = asset(100000, CORE_SYM); //100 TLOS
+
+    //units
+    const uint32_t DAY_SEC = 86400;
+
+    //project statuses
     enum PROJECT_STATUS : uint8_t {
         SETUP, //0
         FUNDING, //1
@@ -42,6 +51,8 @@ public:
         FAILED, //3
         CANCELLED //4
     };
+
+
 
     //======================== tables ========================
 
@@ -51,36 +62,50 @@ public:
         name project_name;
         name category;
         name creator;
-
         asset requested;
         asset received;
-
-        uint32_t begin_time;
-        uint32_t end_time;
         uint8_t status;
+        uint32_t donations;
+        time_point_sec begin_time; //rename to funding_open?
+        time_point_sec end_time; //rename to funding_close?
+        string uri;
+
+        //TODO: allow multi asset contributions?
+        //map<symbol, asset> requested;
+        //map<symbol, asset> received;
+        //double progress;
 
         uint64_t primary_key() const { return project_name.value; }
         //TODO: make by_creator() index?
-        EOSLIB_SERIALIZE(project, 
+        EOSLIB_SERIALIZE(project,
             (project_name)(category)(creator)
-            (requested)(received)
-            (begin_time)(end_time)(status))
+            (requested)(received)(status)(donations)
+            (begin_time)(end_time)
+            (uri))
     };
 
     typedef multi_index<name("projects"), project> projects_table;
 
-    //@scope get_self().value
+    //@scope owner.value
     //@ram 
     TABLE account {
-        name account_name;
         asset balance;
-        asset rewards;
 
-        uint64_t primary_key() const { return account_name.value; }
-        EOSLIB_SERIALIZE(account, (account_name)(balance)(rewards))
+        uint64_t primary_key() const { return balance.symbol.code().raw(); }
+        EOSLIB_SERIALIZE(account, (balance))
     };
 
     typedef multi_index<name("accounts"), account> accounts_table;
+
+    //@scope get_self().value
+    //@ram
+    // TABLE worker {
+    //     name account_name;
+    //     //TODO: skills and endorsements?
+    //     uint64_t primary_key() const { return account_name.value; }
+    //     EOSLIB_SERIALIZE(worker, (account_name))
+    // };
+    // typedef multi_index<name("workers"), worker> workers_table;
 
     //@scope get_self().value
     //@ram 
@@ -106,8 +131,6 @@ public:
     TABLE category {
         name category_name;
 
-        //TODO: project counts by category?
-
         uint64_t primary_key() const { return category_name.value; }
         EOSLIB_SERIALIZE(category, (category_name))
     };
@@ -116,49 +139,44 @@ public:
 
     //@scope get_self().value
     //@ram 
-    TABLE featured {
-        // uint64_t featured_id;
-        name project_name;
-        uint32_t featured_until;
+    // TABLE featured {
+    //     name project_name;
+    //     time_point_sec featured_until;
+    //     uint64_t primary_key() const { return project_name.value; }
+    //     EOSLIB_SERIALIZE(featured, (project_name)(featured_until))
+    // };
+    // typedef multi_index<name("featured"), featured> featured_table;
 
-        uint64_t primary_key() const { return project_name.value; }
-        EOSLIB_SERIALIZE(featured, (project_name)(featured_until))
-    };
 
-    typedef multi_index<name("featured"), featured> featured_table;
 
     //======================== project actions ========================
 
     //create a new project
-    ACTION newproject(name project_name, name category, name creator, 
-        string title, string description, asset requested);
+    ACTION newproject(name project_name, name category, name creator, asset requested, string uri);
 
-    //TODO: make optional params
-    //update the content of the project
-    ACTION updateproj(name project_name, name creator,
-        string new_title, string new_desc, string new_link, asset new_requested);
-
-    //opens the project up for funding for the specified number of days
+    //opens a project for funding
     ACTION openfunding(name project_name, name creator, uint8_t length_in_days);
 
-    //marks a project as cancelled and releases all funds received, if any
-    ACTION cancelproj(name project_name, name creator);
+    //closes a project after funding
+    ACTION closeproject(name project_name, name creator);
 
-    //deletes a project completely
-    //can only be called before funding is open
-    ACTION deleteproj(name project_name, name creator);
+    //deletes a project if no funding has been received, otherwise cancels it
+    ACTION delproject(name project_name, name creator);
+
+
 
    //======================== account actions ========================
 
-    //registers a new account in Grassroots
-    ACTION registeracct(name account_name);
+    //opens a token account
+    ACTION open(name account_name, symbol sym);
 
-    //withdraws unspent grassroots balance back to eosio.token account
+    //closes a token account
+    ACTION close(name account_name, symbol sym);
+
+    //withdraws balance to eosio.token account
     ACTION withdraw(name account_name, asset amount);
 
-    //deletes an account from the Grassroots platform
-    //returns ram and balance back to user, forfeits rewards
-    ACTION deleteacct(name account_name);
+
 
     //======================== donation actions ========================
 
@@ -169,17 +187,9 @@ public:
     //reclaims an entire donation from a project
     ACTION undonate(name project_name, name donor, string memo);
 
-    //======================== preorder actions ========================
-
     
 
     //======================== admin actions ========================
-
-    //suspends an account from the platform
-    // ACTION suspendacct(name account_to_suspend, string memo);
-
-    //restores an account to good standing
-    // ACTION restoreacct(name account_to_restore, string memo);
 
     //adds a new category to the platform
     ACTION addcategory(name new_category);
@@ -187,15 +197,21 @@ public:
     //removes a category from the platform
     ACTION rmvcategory(name category);
 
+
+
     //========== functions ==========
 
     //returns true if parameter name is a valid category
     bool is_valid_category(name category);
 
+
+
     //========== reactions ==========
 
-    //catches transfers sent to @gograssroots
+    //catches eosio.token transfers sent to @gograssroots
     void catch_transfer(name from, name to, asset quantity, string memo);
+
+
 
     //========== migration actions ==========
 
@@ -205,6 +221,8 @@ public:
 
     ACTION rmvdonation(uint64_t donation_id);
 
-    ACTION addfeatured(name project_name, uint32_t added_seconds);
+    // ACTION addfeatured(name project_name, uint32_t added_seconds);
+
+
 
 };
