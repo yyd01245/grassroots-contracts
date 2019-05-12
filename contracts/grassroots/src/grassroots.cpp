@@ -8,9 +8,9 @@
 
 #include "../include/grassroots.hpp";
 
-grassroots::grassroots(name self, name code, datastream<const char*> ds) : contract(self, code, ds) {}
+// grassroots::grassroots(name self, name code, datastream<const char*> ds) : contract(self, code, ds) {}
 
-grassroots::~grassroots() {}
+// grassroots::~grassroots() {}
 
 //======================== project actions ========================
 
@@ -42,8 +42,8 @@ ACTION grassroots::newproject(name project_name, name category, name creator, as
         row.received = asset(0, CORE_SYM);
         row.status = SETUP;
         row.donations = 0;
-        row.begin_time = time_point_sec(0);
-        row.end_time = time_point_sec(0);
+        row.funding_open = time_point_sec(0);
+        row.funding_close = time_point_sec(0);
         row.uri = uri;
     });
 }
@@ -72,8 +72,8 @@ ACTION grassroots::openfunding(name project_name, name creator, uint8_t length_i
 
     //modify project times and status
     projects.modify(proj, same_payer, [&](auto& row) {
-        row.begin_time = time_point_sec(current_time_point());
-        row.end_time = time_point_sec(current_time_point()) + uint32_t(length_in_days * 86400);
+        row.funding_open = time_point_sec(current_time_point());
+        row.funding_close = time_point_sec(current_time_point()) + uint32_t(length_in_days * 86400);
         row.status = FUNDING;
     });
 }
@@ -181,7 +181,7 @@ ACTION grassroots::donate(name project_name, name donor, asset amount, string me
     auto don = by_donor.find(project_name.value);
 
     //validate
-    check(proj.end_time > time_point_sec(current_time_point()), "project funding is over");
+    check(proj.funding_close > time_point_sec(current_time_point()), "project funding is over");
     check(amount > asset(0, CORE_SYM), "must donate a positive amount");
     check(acct.balance >= amount, "insufficient balance");
 
@@ -310,7 +310,7 @@ bool grassroots::is_valid_category(name category) {
     categories_table categories(get_self(), get_self().value);
     auto cat = categories.find(category.value);
 
-    return cat != categories.end();
+    return (cat != categories.end());
 }
 
 
@@ -320,6 +320,8 @@ bool grassroots::is_valid_category(name category) {
 void grassroots::catch_transfer(name from, name to, asset quantity, string memo) {
 
     //TODO: parse string for donation info
+
+    name rec = get_first_receiver();
 
     //check for account
     accounts_table accounts(get_self(), to.value);
@@ -381,21 +383,13 @@ ACTION grassroots::rmvdonation(uint64_t donation_id) {
 
 
 
-//========== dispatcher ==========
+//========== pre/post dispatcher ==========
 
 // extern "C"
 // {
 //     void apply(uint64_t receiver, uint64_t code, uint64_t action)
 //     {
-//         size_t size = action_data_size();
-//         constexpr size_t max_stack_buffer_size = 512;
-//         void* buffer = nullptr;
-//         if( size > 0 ) {
-//             buffer = max_stack_buffer_size < size ? malloc(size) : alloca(size);
-//             read_action_data(buffer, size);
-//         }
-//         datastream<const char*> ds((char*)buffer, size);
-
+// 
 //         if (code == receiver)
 //         {
 //             switch (action)
@@ -407,9 +401,25 @@ ACTION grassroots::rmvdonation(uint64_t donation_id) {
 //                     (addcategory)(rmvcategory) //admin
 //                     (rmvaccount)(rmvproject)(rmvdonation)(addfeatured)); //migration
 //             }
-
 //         }  else if (code == name("eosio.token").value && action == name("transfer").value) {
 //             execute_action<grassroots>(eosio::name(receiver), eosio::name(code), &grassroots::catch_transfer);
 //         }
 //     }
 // }
+
+// extern "C" bool pre_dispatch(name self, name original_receiver, name action) {
+//    print_f("pre_dispatch : % % %\n", self, original_receiver, action);
+//    name nm;
+//    read_action_data((char*)&nm, sizeof(nm));
+//    if (nm == "quit"_n) {
+//       return false;
+//    }
+//    return true;
+// }
+
+// extern "C" void post_dispatch(name self, name original_receiver, name action) {
+//    print_f("post_dispatch : % % %\n", self, original_receiver, action);
+//    std::set<name> valid_actions = {"test1"_n, "test2"_n, "test4"_n, "test5"_n};
+//    check(valid_actions.count(action) == 0, "valid action should have dispatched");
+//    check(self == "eosio"_n, "should only be eosio for action failures");
+// }   

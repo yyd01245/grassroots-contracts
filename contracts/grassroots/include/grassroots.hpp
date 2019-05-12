@@ -19,9 +19,9 @@ using namespace eosio;
 CONTRACT grassroots : public contract {
     public:
 
-    grassroots(name self, name code, datastream<const char*> ds);
+    // grassroots(name self, name code, datastream<const char*> ds);
 
-    ~grassroots();
+    // ~grassroots();
 
     //admin accounts
     const name ADMIN_NAME = name("gograssroots");
@@ -37,11 +37,16 @@ CONTRACT grassroots : public contract {
     const asset LISTING_FEE = asset(250000, CORE_SYM); //25 TLOS
     const asset RAM_FEE = asset(1000, CORE_SYM); //0.1 TLOS
 
-    //thresholds
-    const asset MIN_PROJECT_REQUESTED = asset(100000, CORE_SYM); //100 TLOS
-
     //units
-    const uint32_t DAY_SEC = 86400;
+    const uint32_t HOUR_SEC = 3600; //1 hour in seconds
+    const uint32_t DAY_SEC = 86400; //1 day in seconds
+    const uint32_t WEEK_SEC = 604800; //1 week in seconds
+    const uint32_t HALF_YEAR_SEC = 15724800; //6 months in seconds
+
+    //thresholds
+    const uint32_t MIN_FUNDING_TIME = HOUR_SEC;
+    const uint32_t MAX_FUNDING_TIME = HALF_YEAR_SEC;
+    const asset MIN_PROJECT_REQUESTED = asset(100000, CORE_SYM); //100 TLOS
 
     //project statuses
     enum PROJECT_STATUS : uint8_t {
@@ -66,8 +71,8 @@ CONTRACT grassroots : public contract {
         asset received;
         uint8_t status;
         uint32_t donations;
-        time_point_sec begin_time; //rename to funding_open?
-        time_point_sec end_time; //rename to funding_close?
+        time_point_sec funding_open;
+        time_point_sec funding_close;
         string uri;
 
         //TODO: allow multi asset contributions?
@@ -75,12 +80,14 @@ CONTRACT grassroots : public contract {
         //map<symbol, asset> received;
         //double progress;
 
+        //TODO: positions?
+
         uint64_t primary_key() const { return project_name.value; }
         //TODO: make by_creator() index?
         EOSLIB_SERIALIZE(project,
             (project_name)(category)(creator)
             (requested)(received)(status)(donations)
-            (begin_time)(end_time)
+            (funding_open)(funding_close)
             (uri))
     };
 
@@ -209,6 +216,7 @@ CONTRACT grassroots : public contract {
     //========== reactions ==========
 
     //catches eosio.token transfers sent to @gograssroots
+    [[eosio::on_notify("eosio.token::transfer")]]
     void catch_transfer(name from, name to, asset quantity, string memo);
 
 
