@@ -321,7 +321,9 @@ void grassroots::catch_transfer(name from, name to, asset quantity, string memo)
 
     //TODO: parse string for donation info
 
+    //get first receiver of action
     name rec = get_first_receiver();
+    check(rec == name("eosio.token"), "not eosio.token transfer");
 
     //check for account
     accounts_table accounts(get_self(), to.value);
